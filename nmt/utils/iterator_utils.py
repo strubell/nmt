@@ -250,6 +250,7 @@ def get_iterator(src_dataset,
 
   with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
+    sess.run(batched_iter.initializer)
     print("BATCH:", sess.run(batched_iter.get_next()))
 
   (src_ids, tgt_input_ids, tgt_output_ids, src_seq_len,
