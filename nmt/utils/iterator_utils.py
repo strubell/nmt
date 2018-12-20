@@ -215,11 +215,16 @@ def get_iterator(src_dataset,
         # (Though notice we don't generally need to do this since
         # later on we will be masking out calculations past the true sequence.
         padding_values=(
-            src_eos_id,  # src
-            tgt_eos_id,  # tgt_input
-            tgt_eos_id,  # tgt_output
-            0,  # src_len -- unused
-            0))  # tgt_len -- unused
+            # src_eos_id,  # src
+            # tgt_eos_id,  # tgt_input
+            # tgt_eos_id,  # tgt_output
+            # 0,  # src_len -- unused
+            # 0))  # tgt_len -- unused
+              eos,  # src
+              eos,  # tgt_input
+              eos,  # tgt_output
+              0,  # src_len -- unused
+              0))  # tgt
 
   if num_buckets > 1:
 
