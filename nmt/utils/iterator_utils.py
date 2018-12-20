@@ -147,6 +147,9 @@ def get_iterator(src_dataset,
       tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
     num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
 
+  with tf.Session() as session:
+    print("DATASET:", session.run(src_tgt_dataset))
+
   # Filter zero length input sequences.
   src_tgt_dataset = src_tgt_dataset.filter(
       lambda src, tgt: tf.logical_and(tf.size(src) > 0, tf.size(tgt) > 0))
