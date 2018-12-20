@@ -86,7 +86,7 @@ class GNMTModel(attention_model.AttentionModel):
       with tf.Session() as sess:
         sess.run(tf.tables_initializer())
         sess.run(tf.global_variables_initializer())
-        sess.run(batched_iter.initializer, feed_dict={skip_count: 3})
+        sess.run(iterator.initializer, feed_dict={'skip_count': 3})
         print("BATCH:", sess.run(source))
 
       # Execute _build_bidirectional_rnn from Model class
