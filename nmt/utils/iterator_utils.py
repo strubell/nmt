@@ -189,8 +189,8 @@ def get_iterator(src_dataset,
                         # todo: uncomment
                         # tf.concat(([tgt_sos_id], tgt), 0),
                         # tf.concat((tgt, [tgt_eos_id]), 0)),
-                        tf.concat(([tf.constant(sos), tf.constant(sos)], tgt), 0),
-                        tf.concat((tgt, [tf.constant(eos), tf.constant(eos)]), 0)),
+                        tf.concat((tf.expand_dims([tf.constant(sos), tf.constant(sos)]), tgt), 0),
+                        tf.concat((tgt, tf.expand_dims([tf.constant(eos), tf.constant(eos)], 0)), 0)),
       num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
   # Add in sequence lengths.
   if use_char_encode:
