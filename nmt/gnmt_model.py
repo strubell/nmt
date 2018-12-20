@@ -77,6 +77,8 @@ class GNMTModel(attention_model.AttentionModel):
     with tf.variable_scope("encoder") as scope:
       dtype = scope.dtype
 
+
+      # todo: change this to concat all of our inputs
       self.encoder_emb_inp = self.encoder_emb_lookup_fn(
           self.embedding_encoder, source)
 

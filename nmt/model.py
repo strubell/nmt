@@ -28,6 +28,7 @@ from . import model_helper
 from .utils import iterator_utils
 from .utils import misc_utils as utils
 from .utils import vocab_utils
+from . import mobile
 
 utils.check_tensorflow_version()
 
@@ -162,10 +163,11 @@ class BaseModel(object):
     tf.get_variable_scope().set_initializer(initializer)
 
     # Embeddings
-    if extra_args and extra_args.encoder_emb_lookup_fn:
-      self.encoder_emb_lookup_fn = extra_args.encoder_emb_lookup_fn
-    else:
-      self.encoder_emb_lookup_fn = tf.nn.embedding_lookup
+    # if extra_args and extra_args.encoder_emb_lookup_fn:
+    #   self.encoder_emb_lookup_fn = extra_args.encoder_emb_lookup_fn
+    # else:
+    #   self.encoder_emb_lookup_fn = tf.nn.embedding_lookup
+    self.encoder_emb_lookup_fn = mobile.multi_input_encoder_emb_lookup_fn
     self.init_embeddings(hparams, scope)
 
   def _set_train_or_infer(self, res, reverse_target_vocab_table, hparams):
