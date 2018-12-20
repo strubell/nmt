@@ -108,7 +108,7 @@ class BaseModel(object):
     # batch x seq x 2 x embedding_dim
     embeddings = tf.nn.embedding_lookup(embedding_encoder, source)
     embeddings_shape = tf.shape(embeddings)
-    print("embeddings_shape", embeddings_shape)
+    print("embeddings_shape", embeddings_shape, embeddings)
     return tf.reshape(embeddings, [embeddings_shape[0], embeddings_shape[1], -1])
     # with tf.Session() as sess:
     #   sess.run(tf.tables_initializer())

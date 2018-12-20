@@ -81,7 +81,7 @@ class GNMTModel(attention_model.AttentionModel):
       self.encoder_emb_inp = self.encoder_emb_lookup_fn(
           self.embedding_encoder, source)
 
-      print(self.encoder_emb_inp)
+      print("encoder emb input", self.encoder_emb_inp)
 
       with tf.Session() as sess:
         sess.run(tf.tables_initializer())
