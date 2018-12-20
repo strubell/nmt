@@ -183,11 +183,11 @@ def get_iterator(src_dataset,
         lambda src, tgt: (tf.reshape(vocab_utils.tokens_to_bytes(src), [-1]),
                           tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
         num_parallel_calls=num_parallel_calls)
-  # else:
-  #   src_tgt_dataset = src_tgt_dataset.map(
-  #       lambda src, tgt: (tf.cast(src_vocab_table.lookup(src), tf.int32),
-  #                         tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
-  #       num_parallel_calls=num_parallel_calls)
+  else:
+    src_tgt_dataset = src_tgt_dataset.map(
+        lambda src, tgt: (tf.cast(src_vocab_table.lookup(src), tf.int32),
+                          tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
+        num_parallel_calls=num_parallel_calls)
 
 
   src_tgt_dataset = src_tgt_dataset.prefetch(output_buffer_size)
