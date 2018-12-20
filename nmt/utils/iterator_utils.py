@@ -128,8 +128,6 @@ def get_iterator(src_dataset,
   tgt_sos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(sos)), tf.int32)
   tgt_eos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(eos)), tf.int32)
 
-  print("SRC DATASET:", src_dataset.eval())
-
   src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
   src_tgt_dataset = src_tgt_dataset.shard(num_shards, shard_index)
@@ -143,6 +141,11 @@ def get_iterator(src_dataset,
       lambda src, tgt: (
           tf.string_split([src]).values, tf.string_split([tgt]).values),
       num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
+
+  src_tgt_dataset = src_tgt_dataset.map(
+    lambda src, tgt: (
+      tf.string_split([src], delimiter="_").values, tf.string_split([tgt], delimiter="_").values),
+    num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
 
   # Filter zero length input sequences.
   src_tgt_dataset = src_tgt_dataset.filter(
