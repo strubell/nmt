@@ -187,6 +187,7 @@ def get_iterator(src_dataset,
   src_tgt_dataset = src_tgt_dataset.map(
       lambda src, tgt: (src,
                         # todo: uncomment
+                        # todo don't hardcode dims (2 specifically)
                         # tf.concat(([tgt_sos_id], tgt), 0),
                         # tf.concat((tgt, [tgt_eos_id]), 0)),
                         tf.concat((tf.constant(sos, shape=[1, 2]), tgt), 0),
@@ -216,9 +217,9 @@ def get_iterator(src_dataset,
         # these have unknown-length vectors.  The last two entries are
         # the source and target row sizes; these are scalars.
         padded_shapes=(
-            tf.TensorShape([None]),  # src
-            tf.TensorShape([None]),  # tgt_input
-            tf.TensorShape([None]),  # tgt_output
+            tf.TensorShape([None, 2]),  # src
+            tf.TensorShape([None, 2]),  # tgt_input
+            tf.TensorShape([None, 2]),  # tgt_output
             tf.TensorShape([]),  # src_len
             tf.TensorShape([])),  # tgt_len
         # Pad the source and target sequences with eos tokens.
