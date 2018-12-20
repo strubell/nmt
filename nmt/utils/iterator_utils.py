@@ -130,6 +130,7 @@ def get_iterator(src_dataset,
   tgt_sos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(sos)), tf.int32)
   tgt_eos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(eos)), tf.int32)
 
+  print(tgt_sos_id)
   tgt_sos_id = tf.Print(tgt_sos_id, [tgt_sos_id], "tgt_sos_id")
 
   src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
