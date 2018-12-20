@@ -47,6 +47,7 @@ def get_infer_iterator(src_dataset,
   src_dataset = src_dataset.map(lambda src: tf.string_split([src]).values)
 
   if src_max_len:
+    # todo deal with multiple here?
     src_dataset = src_dataset.map(lambda src: src[:src_max_len])
 
   if use_char_encode:
@@ -55,6 +56,7 @@ def get_infer_iterator(src_dataset,
         lambda src: tf.reshape(vocab_utils.tokens_to_bytes(src), [-1]))
   else:
     # Convert the word strings to ids
+    # todo deal with multiple here
     src_dataset = src_dataset.map(
         lambda src: tf.cast(src_vocab_table.lookup(src), tf.int32))
 
@@ -121,8 +123,12 @@ def get_iterator(src_dataset,
   else:
     src_eos_id = tf.cast(src_vocab_table.lookup(tf.constant(eos)), tf.int32)
 
+  # todo: need to handle multiple vocabs here
+
   tgt_sos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(sos)), tf.int32)
   tgt_eos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(eos)), tf.int32)
+
+  print("SRC DATASET:", src_dataset[0])
 
   src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
