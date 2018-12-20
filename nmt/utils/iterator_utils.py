@@ -144,7 +144,9 @@ def get_iterator(src_dataset,
 
   src_tgt_dataset = src_tgt_dataset.map(
     lambda src, tgt: (
-      tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
+      # tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
+      tf.string_split(src, delimiter="_"), tf.string_split(tgt, delimiter="_")),
+
     num_parallel_calls=num_parallel_calls)
 
   # Filter zero length input sequences.
@@ -177,6 +179,7 @@ def get_iterator(src_dataset,
   # Create a tgt_input prefixed with <sos> and a tgt_output suffixed with <eos>.
   src_tgt_dataset = src_tgt_dataset.map(
       lambda src, tgt: (src,
+                        # todo: uncomment
                         # tf.concat(([tgt_sos_id], tgt), 0),
                         # tf.concat((tgt, [tgt_eos_id]), 0)),
                         tf.concat(([tf.constant(sos)], tgt), 0),
@@ -215,6 +218,7 @@ def get_iterator(src_dataset,
         # (Though notice we don't generally need to do this since
         # later on we will be masking out calculations past the true sequence.
         padding_values=(
+          # todo: uncomment
             # src_eos_id,  # src
             # tgt_eos_id,  # tgt_input
             # tgt_eos_id,  # tgt_output
