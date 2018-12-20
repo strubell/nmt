@@ -145,8 +145,15 @@ def get_iterator(src_dataset,
   src_tgt_dataset = src_tgt_dataset.map(
     lambda src, tgt: (
       # tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
-      tf.sparse.to_dense(tf.string_split(src, delimiter="_")), tf.sparse.to_dense(tf.string_split(tgt, delimiter="_"))),
+      tf.string_split(src, delimiter="_"),
+      tf.string_split(tgt, delimiter="_")),
+    num_parallel_calls=num_parallel_calls)
 
+  src_tgt_dataset = src_tgt_dataset.map(
+    lambda src, tgt: (
+      # tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
+      tf.sparse_to_dense(src.indices, src.dense_shape, src.values),
+      tf.sparse_to_dense(tgt.indices, tgt.dense_shape, tgt.values)),
     num_parallel_calls=num_parallel_calls)
 
   # Filter zero length input sequences.
