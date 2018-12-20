@@ -147,9 +147,6 @@ def get_iterator(src_dataset,
       tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
     num_parallel_calls=num_parallel_calls)
 
-  with tf.Session() as session:
-    print("DATASET:", session.run(src_tgt_dataset))
-
   # Filter zero length input sequences.
   src_tgt_dataset = src_tgt_dataset.filter(
       lambda src, tgt: tf.logical_and(tf.size(src) > 0, tf.size(tgt) > 0))
@@ -249,6 +246,11 @@ def get_iterator(src_dataset,
   else:
     batched_dataset = batching_func(src_tgt_dataset)
   batched_iter = batched_dataset.make_initializable_iterator()
+
+
+  with tf.Session() as session:
+    print("BATCH:", session.run(batched_iter.get_next()))
+
   (src_ids, tgt_input_ids, tgt_output_ids, src_seq_len,
    tgt_seq_len) = (batched_iter.get_next())
   return BatchedInput(
