@@ -765,6 +765,8 @@ class Model(BaseModel):
 
       self.encoder_emb_inp = self.encoder_emb_lookup_fn(
           self.embedding_encoder, sequence)
+      
+      print("encoder emb input", self.encoder_emb_inp)
 
       # Encoder_outputs: [max_time, batch_size, num_units]
       if hparams.encoder_type == "uni":
