@@ -182,7 +182,7 @@ class BaseModel(object):
     #   self.encoder_emb_lookup_fn = extra_args.encoder_emb_lookup_fn
     # else:
     #   self.encoder_emb_lookup_fn = tf.nn.embedding_lookup
-    self.encoder_emb_lookup_fn = multi_input_encoder_emb_lookup_fn
+    self.encoder_emb_lookup_fn = self.multi_input_encoder_emb_lookup_fn
     self.init_embeddings(hparams, scope)
 
   def _set_train_or_infer(self, res, reverse_target_vocab_table, hparams):
