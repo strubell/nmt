@@ -101,6 +101,21 @@ class BaseModel(object):
     self.saver = tf.train.Saver(
         tf.global_variables(), max_to_keep=hparams.num_keep_ckpts)
 
+  # lookup and concat source inputs
+  # before: tf.nn.embedding_lookup(embedding_encoder, source)
+  def multi_input_encoder_emb_lookup_fn(self, embedding_encoder, source):
+
+    # batch x seq x 2 x embedding_dim
+    embeddings = tf.nn.embedding_lookup(embedding_encoder, source)
+    embeddings_shape = tf.shape(embeddings)
+    return tf.reshape(embeddings, [embeddings_shape[0], embeddings_shape[1], -1])
+    # with tf.Session() as sess:
+    #   sess.run(tf.tables_initializer())
+    #   sess.run(tf.global_variables_initializer())
+    #   sess.run(batched_iter.initializer,feed_dict={skip_count: 3})
+    #   print("BATCH:", sess.run(source))
+    #   # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
+
   def _set_params_initializer(self,
                               hparams,
                               mode,
@@ -167,7 +182,7 @@ class BaseModel(object):
     #   self.encoder_emb_lookup_fn = extra_args.encoder_emb_lookup_fn
     # else:
     #   self.encoder_emb_lookup_fn = tf.nn.embedding_lookup
-    self.encoder_emb_lookup_fn = mobile.multi_input_encoder_emb_lookup_fn
+    self.encoder_emb_lookup_fn = multi_input_encoder_emb_lookup_fn
     self.init_embeddings(hparams, scope)
 
   def _set_train_or_infer(self, res, reverse_target_vocab_table, hparams):
@@ -300,6 +315,7 @@ class BaseModel(object):
             decay_steps, decay_factor, staircase=True),
         name="learning_rate_decay_cond")
 
+  # todo: need this to return lists/maps of embedding lookup tables
   def init_embeddings(self, hparams, scope):
     """Init embeddings."""
     self.embedding_encoder, self.embedding_decoder = (
