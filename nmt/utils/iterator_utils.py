@@ -196,10 +196,10 @@ def get_iterator(src_dataset,
       lambda src, tgt: (src,
                         # tf.concat(([tgt_sos_id], tgt), 0),
                         # tf.concat((tgt, [tgt_eos_id]), 0)),
-                        # tf.concat((tf.constant(tgt_sos_id, shape=[1, num_inputs]), tgt), 0),
-                        # tf.concat((tgt, tf.constant(tgt_eos_id, shape=[1, num_inputs])), 0)),
-                        tf.concat((tf.constant(sos, shape=[1, num_inputs]), tgt), 0),
-                        tf.concat((tgt, tf.constant(eos, shape=[1, num_inputs])), 0)),
+                        tf.concat((tf.constant(4, shape=[1, num_inputs]), tgt), 0),
+                        tf.concat((tgt, tf.constant(4, shape=[1, num_inputs])), 0)),
+                        # tf.concat((tf.constant(sos, shape=[1, num_inputs]), tgt), 0),
+                        # tf.concat((tgt, tf.constant(eos, shape=[1, num_inputs])), 0)),
       num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
   # Add in sequence lengths.
   if use_char_encode:
@@ -234,16 +234,16 @@ def get_iterator(src_dataset,
         # (Though notice we don't generally need to do this since
         # later on we will be masking out calculations past the true sequence.
         padding_values=(
-            # src_eos_id,  # src
-            # tgt_eos_id,  # tgt_input
-            # tgt_eos_id,  # tgt_output
-            # 0,  # src_len -- unused
-            # 0))  # tgt_len -- unused
-              eos,  # src
-              eos,  # tgt_input
-              eos,  # tgt_output
-              0,  # src_len -- unused
-              0))  # tgt
+            src_eos_id,  # src
+            tgt_eos_id,  # tgt_input
+            tgt_eos_id,  # tgt_output
+            0,  # src_len -- unused
+            0))  # tgt_len -- unused
+            #   eos,  # src
+            #   eos,  # tgt_input
+            #   eos,  # tgt_output
+            #   0,  # src_len -- unused
+            #   0))  # tgt
 
   if num_buckets > 1:
 
