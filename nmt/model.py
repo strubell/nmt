@@ -109,7 +109,9 @@ class BaseModel(object):
     embeddings = tf.nn.embedding_lookup(embedding_encoder, source)
     embeddings_shape = tf.shape(embeddings)
     print("embeddings_shape", embeddings_shape, embeddings)
-    return tf.reshape(tf.transpose(embeddings, [1, 2, 0, 3]), [embeddings_shape[0], embeddings_shape[1], -1])
+    embeddings_concat = tf.reshape(tf.transpose(embeddings, [1, 2, 0, 3]), [embeddings_shape[1], embeddings_shape[2], -1])
+    print("embeddings_shape", embeddings_shape, embeddings)
+    return embeddings_concat
     # with tf.Session() as sess:
     #   sess.run(tf.tables_initializer())
     #   sess.run(tf.global_variables_initializer())
@@ -765,7 +767,7 @@ class Model(BaseModel):
 
       self.encoder_emb_inp = self.encoder_emb_lookup_fn(
           self.embedding_encoder, sequence)
-      
+
       print("encoder emb input", self.encoder_emb_inp)
 
       # Encoder_outputs: [max_time, batch_size, num_units]
