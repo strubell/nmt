@@ -110,7 +110,7 @@ class BaseModel(object):
     embeddings_transpose = tf.transpose(embeddings, [1, 2, 0, 3])
     embeddings_shape = embeddings_transpose.get_shape().as_list()
     print("embeddings_shape", embeddings_transpose)
-    embeddings_concat = tf.reshape(embeddings_transpose, [embeddings_shape[0], embeddings_shape[1], embeddings_shape[2]*embeddings_shape[3]])
+    embeddings_concat = tf.reshape(embeddings_transpose, tf.stack([embeddings_shape[0], embeddings_shape[1], embeddings_shape[2]*embeddings_shape[3]]))
     print("embeddings_concat_shape", embeddings_concat)
     return embeddings_concat
     # with tf.Session() as sess:
