@@ -276,12 +276,12 @@ def get_iterator(src_dataset,
     batched_dataset = batching_func(src_tgt_dataset)
   batched_iter = batched_dataset.make_initializable_iterator()
 
-  with tf.Session() as sess:
-    sess.run(tf.tables_initializer())
-    sess.run(tf.global_variables_initializer())
-    sess.run(batched_iter.initializer,feed_dict={skip_count: 3})
-    print("BATCH:", sess.run(batched_iter.get_next()))
-    # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
+  # with tf.Session() as sess:
+  #   sess.run(tf.tables_initializer())
+  #   sess.run(tf.global_variables_initializer())
+  #   sess.run(batched_iter.initializer,feed_dict={skip_count: 3})
+  #   print("BATCH:", sess.run(batched_iter.get_next()))
+  #   # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
 
   (src_ids, tgt_input_ids, tgt_output_ids, src_seq_len,
    tgt_seq_len) = (batched_iter.get_next())
