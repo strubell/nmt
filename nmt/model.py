@@ -105,6 +105,8 @@ class BaseModel(object):
   # before: tf.nn.embedding_lookup(embedding_encoder, source)
   def multi_input_encoder_emb_lookup_fn(self, embedding_encoder, source):
 
+    print(source)
+    print("dims:", len(source.get_shape().as_list()))
     if len(source.get_shape().as_list()) == 3:
       return tf.nn.embedding_lookup(embedding_encoder, source)
     else:
