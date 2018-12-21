@@ -40,6 +40,11 @@ def get_infer_iterator(src_dataset,
                        eos,
                        src_max_len=None,
                        use_char_encode=False):
+
+  # todo: need to handle multiple vocabs here
+  # todo don't hardcode this
+  num_inputs = 2
+
   if use_char_encode:
     src_eos_id = vocab_utils.EOS_CHAR_ID
   else:
@@ -82,7 +87,7 @@ def get_infer_iterator(src_dataset,
         # this has unknown-length vectors.  The last entry is
         # the source row size; this is a scalar.
         padded_shapes=(
-            tf.TensorShape([None, None]),  # src
+            tf.TensorShape([None, num_inputs]),  # src
             tf.TensorShape([])),  # src_len
         # Pad the source sequences with eos tokens.
         # (Though notice we don't generally need to do this since
