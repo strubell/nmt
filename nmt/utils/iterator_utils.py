@@ -197,10 +197,12 @@ def get_iterator(src_dataset,
                         # tf.concat(([tgt_sos_id], tgt), 0),
                         # tf.concat((tgt, [tgt_eos_id]), 0)),
                         tf.concat((tf.fill([1, num_inputs], tgt_sos_id), tgt), 0),
-                        tf.concat((tgt, tf.fill([1, num_inputs], tgt_eos_id)), 0)),
+                        # tf.concat((tgt, tf.fill([1, num_inputs], tgt_eos_id)), 0)),
+                        tf.concat((tgt[:,0], [tgt_eos_id]), 0)),
+
                         # tf.concat((tf.constant(sos, shape=[1, num_inputs]), tgt), 0),
                         # tf.concat((tgt, tf.constant(eos, shape=[1, num_inputs])), 0)),
-      num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
+                        num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
   # Add in sequence lengths.
   if use_char_encode:
     src_tgt_dataset = src_tgt_dataset.map(

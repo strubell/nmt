@@ -121,6 +121,18 @@ class BaseModel(object):
     #   print("BATCH:", sess.run(source))
     #   # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
 
+  def multi_input_decoder_emb_lookup_fn(self, embedding_encoder, source):
+
+    # batch x seq x 2 x embedding_dim
+    embeddings = tf.nn.embedding_lookup(embedding_encoder, source)
+    embeddings_transpose = tf.transpose(embeddings, [1, 2, 0, 3])
+    embeddings_shape = embeddings_transpose.get_shape().as_list()
+    embeddings_shape_tensor = tf.shape(embeddings_transpose)
+    print("embeddings_shape", embeddings_transpose)
+    embeddings_concat = tf.reshape(embeddings_transpose, [embeddings_shape_tensor[0], embeddings_shape_tensor[1], embeddings_shape[2]*embeddings_shape[3]])
+    print("embeddings_concat_shape", embeddings_concat)
+    return embeddings_concat
+
   def _set_params_initializer(self,
                               hparams,
                               mode,
@@ -507,7 +519,8 @@ class BaseModel(object):
         target_input = iterator.target_input
         if self.time_major:
           target_input = tf.transpose(target_input)
-        decoder_emb_inp = tf.nn.embedding_lookup(
+
+        decoder_emb_inp = self.multi_input_decoder_emb_lookup_fn(
             self.embedding_decoder, target_input)
 
         # Helper
