@@ -196,8 +196,9 @@ def get_iterator(src_dataset,
       lambda src, tgt: (src,
                         # tf.concat(([tgt_sos_id], tgt), 0),
                         # tf.concat((tgt, [tgt_eos_id]), 0)),
-                        tf.concat((tf.fill([1, num_inputs], tgt_sos_id), tgt), 0),
+                        # tf.concat((tf.fill([1, num_inputs], tgt_sos_id), tgt), 0),
                         # tf.concat((tgt, tf.fill([1, num_inputs], tgt_eos_id)), 0)),
+                        tf.concat(([tgt_sos_id], tgt[:,0]), 0),
                         tf.concat((tgt[:,0], [tgt_eos_id]), 0)),
 
                         # tf.concat((tf.constant(sos, shape=[1, num_inputs]), tgt), 0),
@@ -228,9 +229,10 @@ def get_iterator(src_dataset,
         # the source and target row sizes; these are scalars.
         padded_shapes=(
             tf.TensorShape([None, num_inputs]),  # src
-            tf.TensorShape([None, num_inputs]),  # tgt_input
-            # tf.TensorShape([None, num_inputs]),  # tgt_output
+            tf.TensorShape([None]),  # tgt_input
             tf.TensorShape([None]),  # tgt_output
+            # tf.TensorShape([None, num_inputs]),  # tgt_input
+            # tf.TensorShape([None, num_inputs]),  # tgt_output
             tf.TensorShape([]),  # src_len
             tf.TensorShape([])),  # tgt_len
         # Pad the source and target sequences with eos tokens.
