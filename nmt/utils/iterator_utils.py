@@ -229,7 +229,8 @@ def get_iterator(src_dataset,
         padded_shapes=(
             tf.TensorShape([None, num_inputs]),  # src
             tf.TensorShape([None, num_inputs]),  # tgt_input
-            tf.TensorShape([None, num_inputs]),  # tgt_output
+            # tf.TensorShape([None, num_inputs]),  # tgt_output
+            tf.TensorShape([None]),  # tgt_output
             tf.TensorShape([]),  # src_len
             tf.TensorShape([])),  # tgt_len
         # Pad the source and target sequences with eos tokens.
