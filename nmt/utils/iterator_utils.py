@@ -46,6 +46,12 @@ def get_infer_iterator(src_dataset,
     src_eos_id = tf.cast(src_vocab_table.lookup(tf.constant(eos)), tf.int32)
   src_dataset = src_dataset.map(lambda src: tf.string_split([src]).values)
 
+  src_dataset = src_dataset.map(lambda src: tf.string_split(src, delimiter="_"))
+
+  # string_split returns a sparse tensor, but we want it to be dense
+  src_dataset = src_dataset.map(
+    lambda src: tf.sparse_to_dense(src.indices, src.dense_shape, src.values, default_value=''))
+
   if src_max_len:
     # todo deal with multiple here?
     src_dataset = src_dataset.map(lambda src: src[:src_max_len])
@@ -76,7 +82,7 @@ def get_infer_iterator(src_dataset,
         # this has unknown-length vectors.  The last entry is
         # the source row size; this is a scalar.
         padded_shapes=(
-            tf.TensorShape([None]),  # src
+            tf.TensorShape([None, None]),  # src
             tf.TensorShape([])),  # src_len
         # Pad the source sequences with eos tokens.
         # (Though notice we don't generally need to do this since
