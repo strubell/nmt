@@ -41,10 +41,6 @@ def get_infer_iterator(src_dataset,
                        src_max_len=None,
                        use_char_encode=False):
 
-  # todo: need to handle multiple vocabs here
-  # todo don't hardcode this
-  # num_inputs = 2
-
   if use_char_encode:
     src_eos_id = vocab_utils.EOS_CHAR_ID
   else:
@@ -133,10 +129,6 @@ def get_iterator(src_dataset,
     src_eos_id = vocab_utils.EOS_CHAR_ID
   else:
     src_eos_id = tf.cast(src_vocab_table.lookup(tf.constant(eos)), tf.int32)
-
-  # todo: need to handle multiple vocabs here
-  # todo don't hardcode this
-  num_inputs = 2
 
   tgt_sos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(sos)), tf.int32)
   tgt_eos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(eos)), tf.int32)
@@ -239,7 +231,7 @@ def get_iterator(src_dataset,
         # these have unknown-length vectors.  The last two entries are
         # the source and target row sizes; these are scalars.
         padded_shapes=(
-            tf.TensorShape([None, num_inputs]),  # src
+            tf.TensorShape([None, vocab_utils.NUM_INPUTS]),  # src
             tf.TensorShape([None]),  # tgt_input
             tf.TensorShape([None]),  # tgt_output
             # tf.TensorShape([None, num_inputs]),  # tgt_input
