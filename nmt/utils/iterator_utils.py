@@ -51,7 +51,7 @@ def get_infer_iterator(src_dataset,
     src_eos_id = tf.cast(src_vocab_table.lookup(tf.constant(eos)), tf.int32)
   src_dataset = src_dataset.map(lambda src: tf.string_split([src]).values)
 
-  src_dataset = src_dataset.map(lambda src: tf.string_split(src, delimiter="_"))
+  src_dataset = src_dataset.map(lambda src: tf.string_split(src, delimiter=vocab_utils.INPUT_DELIM))
 
   # string_split returns a sparse tensor, but we want it to be dense
   src_dataset = src_dataset.map(
@@ -161,8 +161,8 @@ def get_iterator(src_dataset,
   src_tgt_dataset = src_tgt_dataset.map(
     lambda src, tgt: (
       # tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
-      tf.string_split(src, delimiter="_"),
-      tf.string_split(tgt, delimiter="_")),
+      tf.string_split(src, delimiter=vocab_utils.INPUT_DELIM),
+      tf.string_split(tgt, delimiter=vocab_utils.INPUT_DELIM)),
     num_parallel_calls=num_parallel_calls)
 
   # string_split returns a sparse tensor, but we want it to be dense
