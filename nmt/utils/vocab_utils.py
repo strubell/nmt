@@ -33,6 +33,9 @@ SOS = "<s>"
 EOS = "</s>"
 UNK_ID = 0
 
+# multi-input delimiter
+INPUT_DELIM = "_"
+
 # char ids 0-255 come from utf-8 encoding bytes
 # assign 256-300 to special chars
 BOS_CHAR_ID = 256  # <begin sentence>
