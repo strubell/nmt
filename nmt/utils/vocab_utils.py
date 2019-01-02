@@ -35,6 +35,7 @@ UNK_ID = 0
 
 # multi-input delimiter
 INPUT_DELIM = "_"
+NUM_INPUTS = 2
 
 # char ids 0-255 come from utf-8 encoding bytes
 # assign 256-300 to special chars
