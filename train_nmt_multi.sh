@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-data_dir=/home/strubell/research/data/nmt_viet_multi
+data_dir=/iesl/canvas/strubell/data/nmt_viet_multi
 
 python -m nmt.nmt \
     --attention=scaled_luong \
