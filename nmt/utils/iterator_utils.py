@@ -190,6 +190,8 @@ def get_iterator(src_dataset,
         lambda src, tgt: (src, tgt[:tgt_max_len]),
         num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
 
+  print("src_tgt_Dataset", src_tgt_dataset)
+
   # Convert the word strings to ids.  Word strings that are not in the
   # vocab get the lookup table's default_value integer.
   if use_char_encode:
