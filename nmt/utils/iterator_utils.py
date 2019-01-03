@@ -205,7 +205,7 @@ def get_iterator(src_dataset,
     def lookup_sep_vocabs(vocab_tables, input):
       mapped_tensors = []
       for i, vocab_table in enumerate(vocab_tables):
-        mapped_tensor = tf.cast(vocab_table.lookup(input[:, i]), tf.int32)
+        mapped_tensor = tf.expand_dims(tf.cast(vocab_table.lookup(input[:, i]), tf.int32), 0)
         mapped_tensors.append(mapped_tensor)
       print("list mapped", mapped_tensors)
       print("mapped", tf.concat(mapped_tensors, axis=-1))
