@@ -273,8 +273,8 @@ def get_iterator(src_dataset,
         padding_values=(
             src_eos_id,  # src
             # this assumes they're the same across outputs
-            tgt_eos_ids[:, 0],  # tgt_input
-            tgt_eos_ids[:, 0],  # tgt_output
+            tgt_eos_ids[0],  # tgt_input
+            tgt_eos_ids[0],  # tgt_output
             0,  # src_len -- unused
             0))  # tgt_len -- unused
             #   eos,  # src
