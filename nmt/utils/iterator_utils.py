@@ -215,6 +215,7 @@ def get_iterator(src_dataset,
                           lookup_sep_vocabs(tgt_vocab_tables, tgt)),
         num_parallel_calls=num_parallel_calls)
 
+  print("src_tgt_Dataset", src_tgt_dataset)
 
   src_tgt_dataset = src_tgt_dataset.prefetch(output_buffer_size)
   # Create a tgt_input prefixed with <sos> and a tgt_output suffixed with <eos>.
