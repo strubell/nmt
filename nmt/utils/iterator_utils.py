@@ -251,6 +251,8 @@ def get_iterator(src_dataset,
 
   print(tgt_eos_ids)
   print(tgt_sos_ids)
+  print(tgt_eos_id)
+  print(src_eos_id)
 
   # Bucket by source sequence length (buckets for lengths 0-9, 10-19, ...)
   def batching_func(x):
