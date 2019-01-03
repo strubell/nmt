@@ -82,7 +82,6 @@ def create_train_model(
   """Create train graph, model, and iterator."""
   src_file = "%s.%s" % (hparams.train_prefix, hparams.src)
   tgt_file = "%s.%s" % (hparams.train_prefix, hparams.tgt)
-  print("SRC ")
   src_vocab_file = hparams.src_vocab_file
   tgt_vocab_file = hparams.tgt_vocab_file
 
@@ -150,7 +149,7 @@ def create_eval_model(model_creator, hparams, scope=None, extra_args=None):
   graph = tf.Graph()
 
   with graph.as_default(), tf.container(scope or "eval"):
-    src_vocab_table, tgt_vocab_table = vocab_utils.create_vocab_tables(
+    src_vocab_tables, tgt_vocab_tables = vocab_utils.create_vocab_tables(
         src_vocab_file, tgt_vocab_file, hparams.share_vocab)
     reverse_tgt_vocab_table = lookup_ops.index_to_string_table_from_file(
         tgt_vocab_file, default_value=vocab_utils.UNK)
@@ -162,8 +161,8 @@ def create_eval_model(model_creator, hparams, scope=None, extra_args=None):
     iterator = iterator_utils.get_iterator(
         src_dataset,
         tgt_dataset,
-        src_vocab_table,
-        tgt_vocab_table,
+        src_vocab_tables,
+        tgt_vocab_tables,
         hparams.batch_size,
         sos=hparams.sos,
         eos=hparams.eos,
@@ -176,8 +175,8 @@ def create_eval_model(model_creator, hparams, scope=None, extra_args=None):
         hparams,
         iterator=iterator,
         mode=tf.contrib.learn.ModeKeys.EVAL,
-        source_vocab_table=src_vocab_table,
-        target_vocab_table=tgt_vocab_table,
+        source_vocab_table=src_vocab_tables,
+        target_vocab_table=tgt_vocab_tables,
         reverse_target_vocab_table=reverse_tgt_vocab_table,
         scope=scope,
         extra_args=extra_args)

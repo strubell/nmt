@@ -148,14 +148,22 @@ def check_vocab(vocab_file, out_dir, check_special_token=True, sos=None,
 def create_vocab_tables(src_vocab_file, tgt_vocab_file, share_vocab):
   """Creates vocab tables for src_vocab_file and tgt_vocab_file."""
   tf.logging.log(tf.logging.INFO, "src/target vocab files: %s, %s" % (src_vocab_file, tgt_vocab_file))
-  src_vocab_table = lookup_ops.index_table_from_file(
-      src_vocab_file, default_value=UNK_ID)
+  src_vocab_tables = []
+  tgt_vocab_tables = []
+  for i in range(NUM_INPUTS_PER_TIMESTEP):
+    src_vocab_fname = src_vocab_file.split('.')[0] + str(i) + "." + src_vocab_file.split('.')[1]
+    src_vocab_table = lookup_ops.index_table_from_file(
+        src_vocab_fname, default_value=UNK_ID)
+    src_vocab_tables.append(src_vocab_table)
   if share_vocab:
-    tgt_vocab_table = src_vocab_table
+    tgt_vocab_tables = src_vocab_tables
   else:
-    tgt_vocab_table = lookup_ops.index_table_from_file(
-        tgt_vocab_file, default_value=UNK_ID)
-  return src_vocab_table, tgt_vocab_table
+    for i in range(NUM_OUTPUTS_PER_TIMESTEP):
+      tgt_vocab_fname = tgt_vocab_file.split('.')[0] + str(i) + "." + tgt_vocab_file.split('.')[1]
+      tgt_vocab_table = lookup_ops.index_table_from_file(
+          tgt_vocab_fname, default_value=UNK_ID)
+      tgt_vocab_tables.append(tgt_vocab_table)
+  return src_vocab_tables, tgt_vocab_tables
 
 
 def load_embed_txt(embed_file):

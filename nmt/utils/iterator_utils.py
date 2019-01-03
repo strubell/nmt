@@ -136,13 +136,17 @@ def get_iterator(src_dataset,
 
   # todo: need to handle multiple vocabs here
   # todo don't hardcode this
-  num_inputs = 2
+  # num_inputs = 2
 
-  tgt_sos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(sos)), tf.int32)
-  tgt_eos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
+  # tgt_sos_ids = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(sos)), tf.int32)
+  # tgt_eos_ids = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
-  print(tgt_sos_id)
-  tgt_sos_id = tf.Print(tgt_sos_id, [tgt_sos_id], "tgt_sos_id")
+  tgt_sos_ids = tf.cast(tf.concat([tgt_vocab_table.lookup(tf.constant(sos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
+  tgt_eos_ids = tf.cast(tf.concat([tgt_vocab_table.lookup(tf.constant(eos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
+
+
+  # print(tgt_sos_id)
+  # tgt_sos_id = tf.Print(tgt_sos_id, [tgt_sos_id], "tgt_sos_id")
 
   src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
@@ -195,10 +199,20 @@ def get_iterator(src_dataset,
                           tf.cast(tgt_vocab_tables.lookup(tgt), tf.int32)),
         num_parallel_calls=num_parallel_calls)
   else:
+
+    def lookup_sep_vocabs(vocab_tables, input):
+      mapped_tensors = []
+      for i, vocab_table in enumerate(vocab_tables):
+        mapped_tensor = tf.cast(vocab_table.lookup(input[:, i]), tf.int32)
+        mapped_tensors.append(mapped_tensor)
+      return tf.concat(mapped_tensors, axis=-1)
+
     # todo need to do lookup for each input/output in its table
     src_tgt_dataset = src_tgt_dataset.map(
-        lambda src, tgt: (tf.cast(src_vocab_table.lookup(src), tf.int32),
-                          tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
+        # lambda src, tgt: (tf.cast(src_vocab_table.lookup(src), tf.int32),
+        #                   tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
+        lambda src, tgt: (lookup_sep_vocabs(src_vocab_tables, src),
+                          lookup_sep_vocabs(tgt_vocab_tables, tgt)),
         num_parallel_calls=num_parallel_calls)
 
 
@@ -208,8 +222,10 @@ def get_iterator(src_dataset,
       lambda src, tgt: (src,
                         # tf.concat(([tgt_sos_id], tgt), 0),
                         # tf.concat((tgt, [tgt_eos_id]), 0)),
-                        tf.concat((tf.fill([1, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP], tgt_sos_id), tgt), 0),
-                        tf.concat((tgt, tf.fill([1, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP], tgt_eos_id)), 0)),
+                        # tf.concat((tf.fill([1, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP], tgt_sos_id), tgt), 0),
+                        # tf.concat((tgt, tf.fill([1, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP], tgt_eos_id)), 0)),
+                        tf.concat((tf.expand_dims(tgt_sos_ids, 0), tgt), 0),
+                        tf.concat((tgt, tf.expand_dims(tgt_eos_ids, 0)), 0)),
                         # these just pull out the first thing (for predicting one)
                         # tf.concat(([tgt_sos_id], tgt[:,0]), 0),
                         # tf.concat((tgt[:,0], [tgt_eos_id]), 0)),
@@ -253,8 +269,9 @@ def get_iterator(src_dataset,
         # later on we will be masking out calculations past the true sequence.
         padding_values=(
             src_eos_id,  # src
-            tgt_eos_id,  # tgt_input
-            tgt_eos_id,  # tgt_output
+            # this assumes they're the same across outputs
+            tgt_eos_ids[0],  # tgt_input
+            tgt_eos_ids[0],  # tgt_output
             0,  # src_len -- unused
             0))  # tgt_len -- unused
             #   eos,  # src
