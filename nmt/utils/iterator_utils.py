@@ -110,8 +110,8 @@ def get_infer_iterator(src_dataset,
 
 def get_iterator(src_dataset,
                  tgt_dataset,
-                 src_vocab_table,
-                 tgt_vocab_table,
+                 src_vocab_tables,
+                 tgt_vocab_tables,
                  batch_size,
                  sos,
                  eos,
@@ -132,14 +132,14 @@ def get_iterator(src_dataset,
   if use_char_encode:
     src_eos_id = vocab_utils.EOS_CHAR_ID
   else:
-    src_eos_id = tf.cast(src_vocab_table.lookup(tf.constant(eos)), tf.int32)
+    src_eos_id = tf.cast(src_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
   # todo: need to handle multiple vocabs here
   # todo don't hardcode this
   num_inputs = 2
 
-  tgt_sos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(sos)), tf.int32)
-  tgt_eos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(eos)), tf.int32)
+  tgt_sos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(sos)), tf.int32)
+  tgt_eos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
   print(tgt_sos_id)
   tgt_sos_id = tf.Print(tgt_sos_id, [tgt_sos_id], "tgt_sos_id")
@@ -192,9 +192,10 @@ def get_iterator(src_dataset,
     # this is broken
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt: (tf.reshape(vocab_utils.tokens_to_bytes(src), [-1]),
-                          tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
+                          tf.cast(tgt_vocab_tables.lookup(tgt), tf.int32)),
         num_parallel_calls=num_parallel_calls)
   else:
+    # todo need to do lookup for each input/output in its table
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt: (tf.cast(src_vocab_table.lookup(src), tf.int32),
                           tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),

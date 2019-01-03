@@ -82,13 +82,14 @@ def create_train_model(
   """Create train graph, model, and iterator."""
   src_file = "%s.%s" % (hparams.train_prefix, hparams.src)
   tgt_file = "%s.%s" % (hparams.train_prefix, hparams.tgt)
+  print("SRC ")
   src_vocab_file = hparams.src_vocab_file
   tgt_vocab_file = hparams.tgt_vocab_file
 
   graph = tf.Graph()
 
   with graph.as_default(), tf.container(scope or "train"):
-    src_vocab_table, tgt_vocab_table = vocab_utils.create_vocab_tables(
+    src_vocab_tables, tgt_vocab_tables = vocab_utils.create_vocab_tables(
         src_vocab_file, tgt_vocab_file, hparams.share_vocab)
 
     # todo: load different input files here
@@ -100,8 +101,8 @@ def create_train_model(
     iterator = iterator_utils.get_iterator(
         src_dataset,
         tgt_dataset,
-        src_vocab_table,
-        tgt_vocab_table,
+        src_vocab_tables,
+        tgt_vocab_tables,
         batch_size=hparams.batch_size,
         sos=hparams.sos,
         eos=hparams.eos,
@@ -123,8 +124,8 @@ def create_train_model(
           hparams,
           iterator=iterator,
           mode=tf.contrib.learn.ModeKeys.TRAIN,
-          source_vocab_table=src_vocab_table,
-          target_vocab_table=tgt_vocab_table,
+          source_vocab_table=src_vocab_tables,
+          target_vocab_table=tgt_vocab_tables,
           scope=scope,
           extra_args=extra_args)
 
@@ -382,6 +383,7 @@ def create_emb_for_encoder_and_decoder(share_vocab,
       else:
         embedding_encoder = None
 
+      # todo load multiple vocabs here
       with tf.variable_scope("decoder", partitioner=dec_partitioner):
         embedding_decoder = _create_or_load_embed(
             "embedding_decoder", tgt_vocab_file, tgt_embed_file,
