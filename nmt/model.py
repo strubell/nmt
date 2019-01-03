@@ -64,9 +64,9 @@ class BaseModel(object):
                hparams,
                mode,
                iterator,
-               source_vocab_table,
-               target_vocab_table,
-               reverse_target_vocab_table=None,
+               source_vocab_tables,
+               target_vocab_tables,
+               reverse_target_vocab_tables=None,
                scope=None,
                extra_args=None):
     """Create the model.
@@ -85,7 +85,7 @@ class BaseModel(object):
     """
     # Set params
     self._set_params_initializer(hparams, mode, iterator,
-                                 source_vocab_table, target_vocab_table,
+                                 source_vocab_tables, target_vocab_tables,
                                  scope, extra_args)
 
     # Not used in general seq2seq models; when True, ignore decoder & training
@@ -95,7 +95,7 @@ class BaseModel(object):
     # Train graph
     res = self.build_graph(hparams, scope=scope)
     if not self.extract_encoder_layers:
-      self._set_train_or_infer(res, reverse_target_vocab_table, hparams)
+      self._set_train_or_infer(res, reverse_target_vocab_tables, hparams)
 
     # Saver
     self.saver = tf.train.Saver(
@@ -149,8 +149,8 @@ class BaseModel(object):
                               hparams,
                               mode,
                               iterator,
-                              source_vocab_table,
-                              target_vocab_table,
+                              source_vocab_tables,
+                              target_vocab_tables,
                               scope,
                               extra_args=None):
     """Set various params for self and initialize."""
