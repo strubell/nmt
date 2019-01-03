@@ -138,8 +138,8 @@ def get_iterator(src_dataset,
   # todo don't hardcode this
   # num_inputs = 2
 
-  # tgt_sos_ids = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(sos)), tf.int32)
-  # tgt_eos_ids = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
+  tgt_sos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(sos)), tf.int32)
+  tgt_eos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
   tgt_sos_ids = tf.cast(tf.stack([tgt_vocab_table.lookup(tf.constant(sos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
   tgt_eos_ids = tf.cast(tf.stack([tgt_vocab_table.lookup(tf.constant(eos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
@@ -273,8 +273,8 @@ def get_iterator(src_dataset,
         padding_values=(
             src_eos_id,  # src
             # this assumes they're the same across outputs
-            1,
-            1,
+            tgt_eos_id,
+            tgt_eos_id,
             # tgt_eos_ids[0],  # tgt_input
             # tgt_eos_ids[0],  # tgt_output
             0,  # src_len -- unused
