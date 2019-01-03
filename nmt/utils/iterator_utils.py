@@ -141,8 +141,8 @@ def get_iterator(src_dataset,
   # tgt_sos_ids = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(sos)), tf.int32)
   # tgt_eos_ids = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
-  tgt_sos_ids = tf.cast(tf.concat([tgt_vocab_table.lookup(tf.constant(sos)) for tgt_vocab_table in tgt_vocab_tables], axis=-1), tf.int32)
-  tgt_eos_ids = tf.cast(tf.concat([tgt_vocab_table.lookup(tf.constant(eos)) for tgt_vocab_table in tgt_vocab_tables], axis=-1), tf.int32)
+  tgt_sos_ids = tf.cast(tf.stack([tgt_vocab_table.lookup(tf.constant(sos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
+  tgt_eos_ids = tf.cast(tf.stack([tgt_vocab_table.lookup(tf.constant(eos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
 
 
   # print(tgt_sos_id)
