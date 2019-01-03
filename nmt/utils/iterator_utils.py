@@ -207,8 +207,6 @@ def get_iterator(src_dataset,
       for i, vocab_table in enumerate(vocab_tables):
         mapped_tensor = tf.expand_dims(tf.cast(vocab_table.lookup(input[:, i]), tf.int32), -1)
         mapped_tensors.append(mapped_tensor)
-      print("list mapped", mapped_tensors)
-      print("mapped", tf.concat(mapped_tensors, axis=-1))
       return tf.concat(mapped_tensors, axis=-1)
 
     # todo need to do lookup for each input/output in its table
@@ -219,8 +217,6 @@ def get_iterator(src_dataset,
                           lookup_sep_vocabs(tgt_vocab_tables, tgt)),
         num_parallel_calls=num_parallel_calls)
 
-  print("src_tgt_Dataset", src_tgt_dataset)
-
   src_tgt_dataset = src_tgt_dataset.prefetch(output_buffer_size)
   # Create a tgt_input prefixed with <sos> and a tgt_output suffixed with <eos>.
   src_tgt_dataset = src_tgt_dataset.map(
@@ -229,8 +225,8 @@ def get_iterator(src_dataset,
                         # tf.concat((tgt, [tgt_eos_id]), 0)),
                         # tf.concat((tf.fill([1, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP], 0), tgt), 0),
                         # tf.concat((tgt, tf.fill([1, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP], 0)), 0)),
-                        tf.concat((tgt_sos_ids, tgt), 0),
-                        tf.concat((tgt, tgt_eos_ids), 0)),
+                        tf.concat((tf.expand_dims(tgt_sos_ids, 0), tgt), 0),
+                        tf.concat((tgt, tf.expand_dims(tgt_eos_ids, 0)), 0)),
                         # these just pull out the first thing (for predicting one)
                         # tf.concat(([tgt_sos_id], tgt[:,0]), 0),
                         # tf.concat((tgt[:,0], [tgt_eos_id]), 0)),
