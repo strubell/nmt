@@ -446,7 +446,7 @@ class BaseModel(object):
       loss = tf.constant(0.0)
       for i in range(vocab_utils.NUM_OUTPUTS_PER_TIMESTEP):
         this_logits, this_decoder_cell_outputs, this_sample_id, this_final_context_state = (
-            self._build_decoder(self.encoder_outputs, encoder_state, hparams))
+            self._build_decoder(self.encoder_outputs, encoder_state, hparams, i))
 
         ## Loss
         if self.mode != tf.contrib.learn.ModeKeys.INFER:
