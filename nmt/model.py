@@ -50,7 +50,7 @@ class EvalOutputTuple(collections.namedtuple(
 
 
 class InferOutputTuple(collections.namedtuple(
-    "InferOutputTuple", ("infer_logits", "infer_summary", "sample_id",
+    "InferOutputTuple", ("infer_logits", "infer_summary", "sample_ids",
                          "sample_words"))):
   """To allow for flexibily in returing different outputs."""
   pass
@@ -129,8 +129,11 @@ class BaseModel(object):
 
   def multi_input_decoder_emb_lookup_fn(self, embedding_encoder, source, output_idx=None):
 
+    # source has dims num_outputs x batch x seq_len
     if output_idx != None:
-      source = source[:, :, output_idx, :]
+      # print("source", source)
+      # print("slice", source[:, :, output_idx, :])
+      source = source[output_idx, :, :]
 
     if len(source.get_shape().as_list()) == 2:
       return tf.nn.embedding_lookup(embedding_encoder, source)
@@ -215,7 +218,7 @@ class BaseModel(object):
     self.encoder_emb_lookup_fn = self.multi_input_encoder_emb_lookup_fn
     self.init_embeddings(hparams, scope)
 
-  def _set_train_or_infer(self, res, reverse_target_vocab_table, hparams):
+  def _set_train_or_infer(self, res, reverse_target_vocab_tables, hparams):
     """Set up training and inference."""
     if self.mode == tf.contrib.learn.ModeKeys.TRAIN:
       self.train_loss = res[1]
@@ -225,9 +228,9 @@ class BaseModel(object):
     elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
       self.eval_loss = res[1]
     elif self.mode == tf.contrib.learn.ModeKeys.INFER:
-      self.infer_logits, _, self.final_context_state, self.sample_id = res
-      self.sample_words = reverse_target_vocab_table.lookup(
-          tf.to_int64(self.sample_id))
+      self.infer_logits, _, self.final_context_states, self.sample_ids = res
+      self.sample_words = [reverse_vocab_table.lookup(tf.to_int64(sample_id))
+                           for sample_id, reverse_vocab_table in zip(self.sample_ids, reverse_target_vocab_tables)]
 
     if self.mode != tf.contrib.learn.ModeKeys.INFER:
       ## Count the number of predicted words for compute ppl.
@@ -424,7 +427,7 @@ class BaseModel(object):
           for i in range(vocab_utils.NUM_OUTPUTS_PER_TIMESTEP):
             # need to build one of these for each of the outputs
             self.output_layers.append(tf.layers.Dense(
-                self.tgt_vocab_size, use_bias=False, name="output_projection_%d"))
+                self.tgt_vocab_size, use_bias=False, name="output_projection_%d" % i))
 
     with tf.variable_scope(scope or "dynamic_seq2seq", dtype=self.dtype):
       # Encoder
@@ -445,15 +448,17 @@ class BaseModel(object):
       sample_ids = []
       loss = tf.constant(0.0)
       for i in range(vocab_utils.NUM_OUTPUTS_PER_TIMESTEP):
-        this_logits, this_decoder_cell_outputs, this_sample_id, this_final_context_state = (
-            self._build_decoder(self.encoder_outputs, encoder_state, hparams, i))
+        with tf.variable_scope("decoder_%d" % i):
+          this_logits, this_decoder_cell_outputs, this_sample_id, this_final_context_state = (
+              self._build_decoder(self.encoder_outputs, encoder_state, hparams, i))
 
         ## Loss
         if self.mode != tf.contrib.learn.ModeKeys.INFER:
           with tf.device(model_helper.get_device_str(self.num_encoder_layers - 1,
                                                      self.num_gpus)):
             # todo: compute loss wrt each set of labels
-            this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs)
+            this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs, self.output_layers[i],
+                                           self.iterator.target_output[i, :, :])
             loss += this_loss
         # else:
           # loss = tf.constant(0.0)
@@ -679,7 +684,7 @@ class BaseModel(object):
     pass
 
   def _softmax_cross_entropy_loss(
-      self, logits, decoder_cell_outputs, labels):
+      self, logits, decoder_cell_outputs, labels, output_layer):
     """Compute softmax loss or sampled softmax loss."""
     if self.num_sampled_softmax > 0:
 
@@ -689,9 +694,10 @@ class BaseModel(object):
         labels = tf.reshape(labels, [-1, 1])
         inputs = tf.reshape(decoder_cell_outputs, [-1, self.num_units])
 
+      # todo need to get correct tgt vocab size
       crossent = tf.nn.sampled_softmax_loss(
-          weights=tf.transpose(self.output_layer.kernel),
-          biases=self.output_layer.bias or tf.zeros([self.tgt_vocab_size]),
+          weights=tf.transpose(output_layer.kernel),
+          biases=output_layer.bias or tf.zeros([self.tgt_vocab_size]),
           labels=labels,
           inputs=inputs,
           num_sampled=self.num_sampled_softmax,
@@ -711,15 +717,16 @@ class BaseModel(object):
 
     return crossent
 
-  def _compute_loss(self, logits, decoder_cell_outputs):
+  def _compute_loss(self, logits, decoder_cell_outputs, output_layer, target_output):
     """Compute optimization loss."""
-    target_output = self.iterator.target_output
+    # todo get the right targets
+    # target_output = self.iterator.target_output
     if self.time_major:
       target_output = tf.transpose(target_output)
     max_time = self.get_max_time(target_output)
 
     crossent = self._softmax_cross_entropy_loss(
-        logits, decoder_cell_outputs, target_output)
+        logits, decoder_cell_outputs, target_output, output_layer)
 
     target_weights = tf.sequence_mask(
         self.iterator.target_sequence_length, max_time, dtype=self.dtype)
@@ -738,7 +745,7 @@ class BaseModel(object):
     assert self.mode == tf.contrib.learn.ModeKeys.INFER
     output_tuple = InferOutputTuple(infer_logits=self.infer_logits,
                                     infer_summary=self.infer_summary,
-                                    sample_id=self.sample_id,
+                                    sample_ids=self.sample_ids,
                                     sample_words=self.sample_words)
     return sess.run(output_tuple)
 
@@ -759,10 +766,10 @@ class BaseModel(object):
     # make sure outputs is of shape [batch_size, time] or [beam_width,
     # batch_size, time] when using beam search.
     if self.time_major:
-      sample_words = sample_words.transpose()
-    elif sample_words.ndim == 3:
+      sample_words = [s.transpose() for s in sample_words]
+    elif sample_words[0].ndim == 3:
       # beam search output in [batch_size, time, beam_width] shape.
-      sample_words = sample_words.transpose([2, 0, 1])
+      sample_words = [s.transpose([2, 0, 1]) for s in sample_words]
     return sample_words, infer_summary
 
   def build_encoder_states(self, include_embeddings=False):

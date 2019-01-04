@@ -34,8 +34,16 @@ class BatchedInput(
   pass
 
 
+def lookup_sep_vocabs(vocab_tables, input):
+  mapped_tensors = []
+  for i, vocab_table in enumerate(vocab_tables):
+    mapped_tensor = tf.expand_dims(tf.cast(vocab_table.lookup(input[:, i]), tf.int32), -1)
+    mapped_tensors.append(mapped_tensor)
+  return tf.concat(mapped_tensors, axis=-1)
+
+
 def get_infer_iterator(src_dataset,
-                       src_vocab_table,
+                       src_vocab_tables,
                        batch_size,
                        eos,
                        src_max_len=None,
@@ -48,7 +56,8 @@ def get_infer_iterator(src_dataset,
   if use_char_encode:
     src_eos_id = vocab_utils.EOS_CHAR_ID
   else:
-    src_eos_id = tf.cast(src_vocab_table.lookup(tf.constant(eos)), tf.int32)
+    # todo assumes all same
+    src_eos_id = tf.cast(src_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
   src_dataset = src_dataset.map(lambda src: tf.string_split([src]).values)
 
   src_dataset = src_dataset.map(lambda src: tf.string_split(src, delimiter=vocab_utils.INPUT_DELIM))
@@ -69,7 +78,7 @@ def get_infer_iterator(src_dataset,
     # Convert the word strings to ids
     # todo deal with multiple here
     src_dataset = src_dataset.map(
-        lambda src: tf.cast(src_vocab_table.lookup(src), tf.int32))
+        lambda src: lookup_sep_vocabs(src_vocab_tables, src))
 
   # Add in the word counts.
   if use_char_encode:
@@ -201,15 +210,6 @@ def get_iterator(src_dataset,
                           tf.cast(tgt_vocab_tables.lookup(tgt), tf.int32)),
         num_parallel_calls=num_parallel_calls)
   else:
-
-    def lookup_sep_vocabs(vocab_tables, input):
-      mapped_tensors = []
-      for i, vocab_table in enumerate(vocab_tables):
-        mapped_tensor = tf.expand_dims(tf.cast(vocab_table.lookup(input[:, i]), tf.int32), -1)
-        mapped_tensors.append(mapped_tensor)
-      return tf.concat(mapped_tensors, axis=-1)
-
-    # todo need to do lookup for each input/output in its table
     src_tgt_dataset = src_tgt_dataset.map(
         # lambda src, tgt: (tf.cast(src_vocab_table.lookup(src), tf.int32),
         #                   tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),

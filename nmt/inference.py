@@ -49,7 +49,7 @@ def _decode_inference_indices(model, sess, output_infer,
 
       # get text translation
       assert nmt_outputs.shape[0] == 1
-      translation = nmt_utils.get_translation(
+      translations = nmt_utils.get_translation(
           nmt_outputs,
           sent_id=0,
           tgt_eos=tgt_eos,
@@ -63,8 +63,9 @@ def _decode_inference_indices(model, sess, output_infer,
         with tf.gfile.GFile(image_file, mode="w") as img_f:
           img_f.write(image_summ.value[0].image.encoded_image_string)
 
-      trans_f.write("%s\n" % translation)
-      utils.print_out(translation + b"\n")
+      for translation in translations:
+        trans_f.write("%s\n" % translation)
+        utils.print_out(translation + b"\n")
   utils.print_time("  done", start_time)
 
 
