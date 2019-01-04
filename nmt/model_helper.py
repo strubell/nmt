@@ -123,8 +123,8 @@ def create_train_model(
           hparams,
           iterator=iterator,
           mode=tf.contrib.learn.ModeKeys.TRAIN,
-          source_vocab_table=src_vocab_tables,
-          target_vocab_table=tgt_vocab_tables,
+          source_vocab_tables=src_vocab_tables,
+          target_vocab_tables=tgt_vocab_tables,
           scope=scope,
           extra_args=extra_args)
 
