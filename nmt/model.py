@@ -161,8 +161,8 @@ class BaseModel(object):
     self.tgt_vocab_tables = target_vocab_tables
 
     # todo these need to be lists/maps
-    self.src_vocab_sizes = hparams.src_vocab_size
-    self.tgt_vocab_sizes = hparams.tgt_vocab_size
+    self.src_vocab_size = hparams.src_vocab_size
+    self.tgt_vocab_size = hparams.tgt_vocab_size
     self.num_gpus = hparams.num_gpus
     self.time_major = hparams.time_major
 
