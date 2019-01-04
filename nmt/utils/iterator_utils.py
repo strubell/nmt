@@ -49,10 +49,6 @@ def get_infer_iterator(src_dataset,
                        src_max_len=None,
                        use_char_encode=False):
 
-  # todo: need to handle multiple vocabs here
-  # todo don't hardcode this
-  # num_inputs = 2
-
   if use_char_encode:
     src_eos_id = vocab_utils.EOS_CHAR_ID
   else:
@@ -85,9 +81,9 @@ def get_infer_iterator(src_dataset,
     src_dataset = src_dataset.map(
         lambda src: (src,
                      tf.to_int32(
-                         tf.size(src) / vocab_utils.DEFAULT_CHAR_MAXLEN)))
+                         tf.shape(src)[0] / vocab_utils.DEFAULT_CHAR_MAXLEN)))
   else:
-    src_dataset = src_dataset.map(lambda src: (src, tf.size(src)))
+    src_dataset = src_dataset.map(lambda src: (src, tf.shape(src)[0]))
 
   def batching_func(x):
     return x.padded_batch(
@@ -188,7 +184,7 @@ def get_iterator(src_dataset,
 
   # Filter zero length input sequences.
   src_tgt_dataset = src_tgt_dataset.filter(
-      lambda src, tgt: tf.logical_and(tf.size(src) > 0, tf.size(tgt) > 0))
+      lambda src, tgt: tf.logical_and(tf.shape(src)[0] > 0, tf.shape(tgt)[0] > 0))
 
   if src_max_len:
     src_tgt_dataset = src_tgt_dataset.map(
@@ -198,8 +194,6 @@ def get_iterator(src_dataset,
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt: (src, tgt[:tgt_max_len]),
         num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
-
-  print("src_tgt_Dataset", src_tgt_dataset)
 
   # Convert the word strings to ids.  Word strings that are not in the
   # vocab get the lookup table's default_value integer.
@@ -234,18 +228,19 @@ def get_iterator(src_dataset,
                         # tf.concat((tf.constant(sos, shape=[1, num_inputs]), tgt), 0),
                         # tf.concat((tgt, tf.constant(eos, shape=[1, num_inputs])), 0)),
                         num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
+
   # Add in sequence lengths.
   if use_char_encode:
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt_in, tgt_out: (
             src, tgt_in, tgt_out,
-            tf.to_int32(tf.size(src) / vocab_utils.DEFAULT_CHAR_MAXLEN),
-            tf.size(tgt_in)),
+            tf.to_int32(tf.shape(src)[0] / vocab_utils.DEFAULT_CHAR_MAXLEN),
+            tf.shape(tgt_in)[0]),
         num_parallel_calls=num_parallel_calls)
   else:
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt_in, tgt_out: (
-            src, tgt_in, tgt_out, tf.size(src), tf.size(tgt_in)),
+            src, tgt_in, tgt_out, tf.shape(src)[0], tf.shape(tgt_in)[0]),
         num_parallel_calls=num_parallel_calls)
 
   src_tgt_dataset = src_tgt_dataset.prefetch(output_buffer_size)

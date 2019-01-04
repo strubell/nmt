@@ -131,8 +131,7 @@ class BaseModel(object):
 
     # source has dims num_outputs x batch x seq_len
     if output_idx != None:
-      # print("source", source)
-      # print("slice", source[:, :, output_idx, :])
+      source = tf.Print(source, [tf.shape(source)], "SOURCE",  name="source_print")
       source = source[output_idx, :, :]
 
     if len(source.get_shape().as_list()) == 2:
@@ -427,7 +426,7 @@ class BaseModel(object):
           for i in range(vocab_utils.NUM_OUTPUTS_PER_TIMESTEP):
             # need to build one of these for each of the outputs
             self.output_layers.append(tf.layers.Dense(
-                self.tgt_vocab_size, use_bias=False, name="output_projection_%d" % i))
+                self.tgt_vocab_size, use_bias=False, name="output_projection"))
 
     with tf.variable_scope(scope or "dynamic_seq2seq", dtype=self.dtype):
       # Encoder
@@ -452,13 +451,20 @@ class BaseModel(object):
           this_logits, this_decoder_cell_outputs, this_sample_id, this_final_context_state = (
               self._build_decoder(self.encoder_outputs, encoder_state, hparams, i))
 
+        # target_output = self.iterator.target_output
+        # target_output = tf.Print(target_output, [tf.shape(target_output)], "target output build_graph")
+
+
         ## Loss
         if self.mode != tf.contrib.learn.ModeKeys.INFER:
           with tf.device(model_helper.get_device_str(self.num_encoder_layers - 1,
                                                      self.num_gpus)):
             # todo: compute loss wrt each set of labels
+            target_output = self.iterator.target_output
+            target_output = tf.Print(target_output, [tf.shape(target_output)], "TARGET OUTPUT", name="target_output_print")
+
             this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs, self.output_layers[i],
-                                           self.iterator.target_output[i, :, :])
+                                           target_output[:, :, i])
             loss += this_loss
         # else:
           # loss = tf.constant(0.0)
@@ -549,14 +555,22 @@ class BaseModel(object):
       ## Train or eval
       if self.mode != tf.contrib.learn.ModeKeys.INFER:
         # decoder_emp_inp: [max_time, batch_size, num_units]
+
         target_input = iterator.target_input
+        target_input = tf.Print(target_input, [tf.shape(target_input)],"TARGET INPUT",  name="target_input_print")
+        target_input = target_input[:, :, output_idx]
+        # target_input = tf.Print(target_input, [tf.shape(target_input)], "target input shape")
+        # target_input = tf.Print(target_input, [iterator.target_sequence_length], "target sequence lengths", summarize=200)
+
         if self.time_major:
           target_input = tf.transpose(target_input)
 
+        # target_input = tf.Print(target_input, [tf.shape(target_input)], "target input shape after")
+
+
         # todo here is where we decide which target inputs to use during train, all or just one?
         # right now: use just this one
-        decoder_emb_inp = self.multi_input_decoder_emb_lookup_fn(
-            self.embedding_decoder, target_input, output_idx)
+        decoder_emb_inp = self.multi_input_decoder_emb_lookup_fn(self.embedding_decoder, target_input)
 
         # Helper
         helper = tf.contrib.seq2seq.TrainingHelper(
@@ -690,7 +704,10 @@ class BaseModel(object):
 
       is_sequence = (decoder_cell_outputs.shape.ndims == 3)
 
+      print("decoder_cell_outputs.shape.ndims:", decoder_cell_outputs.shape.ndims)
+
       if is_sequence:
+        labels = tf.Print(labels, [tf.shape(labels)], "labels rehsape", name="labels_reshape")
         labels = tf.reshape(labels, [-1, 1])
         inputs = tf.reshape(decoder_cell_outputs, [-1, self.num_units])
 
@@ -712,6 +729,7 @@ class BaseModel(object):
           crossent = tf.reshape(crossent, [self.batch_size, -1])
 
     else:
+      labels = tf.Print(labels, [tf.shape(labels), tf.shape(logits)], "labels logits", name="labels_logits_print")
       crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(
           labels=labels, logits=logits)
 
@@ -719,8 +737,6 @@ class BaseModel(object):
 
   def _compute_loss(self, logits, decoder_cell_outputs, output_layer, target_output):
     """Compute optimization loss."""
-    # todo get the right targets
-    # target_output = self.iterator.target_output
     if self.time_major:
       target_output = tf.transpose(target_output)
     max_time = self.get_max_time(target_output)
