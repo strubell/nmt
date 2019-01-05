@@ -105,6 +105,10 @@ class BaseModel(object):
   # before: tf.nn.embedding_lookup(embedding_encoder, source)
   # todo: fix: want to lookup each one in its encoder and concatenate
   def multi_input_encoder_emb_lookup_fn(self, embedding_encoders, source):
+
+    # source = tf.Print(source, [tf.shape(source)], "SOURCE SHAPE")
+    # source is: num_outputs x batch x seq_len
+    source = tf.transpose(source, [1, 2, 0])
     embeddings = []
     for i, embedding_encoder in enumerate(embedding_encoders):
       embeddings.append(tf.nn.embedding_lookup(embedding_encoder, source[:, :, i]))
@@ -132,26 +136,27 @@ class BaseModel(object):
     #   print("BATCH:", sess.run(source))
     #   # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
 
-  # todo: same as above i think
-  def multi_input_decoder_emb_lookup_fn(self, embedding_encoder, source, output_idx=None):
+  def multi_input_decoder_emb_lookup_fn(self, embedding_encoder, source):
 
-    # source has dims num_outputs x batch x seq_len
-    if output_idx != None:
-      source = tf.Print(source, [tf.shape(source)], "SOURCE",  name="source_print")
-      source = source[output_idx, :, :]
-
-    if len(source.get_shape().as_list()) == 2:
-      return tf.nn.embedding_lookup(embedding_encoder, source)
-    else:
-      # batch x seq x num_outputs x embedding_dim
-      embeddings = tf.nn.embedding_lookup(embedding_encoder, source)
-      embeddings_transpose = tf.transpose(embeddings, [1, 2, 0, 3])
-      embeddings_shape = embeddings_transpose.get_shape().as_list()
-      embeddings_shape_tensor = tf.shape(embeddings_transpose)
-      print("embeddings_shape", embeddings_transpose)
-      embeddings_concat = tf.reshape(embeddings_transpose, [embeddings_shape_tensor[0], embeddings_shape_tensor[1], embeddings_shape[2]*embeddings_shape[3]])
-      print("embeddings_concat_shape", embeddings_concat)
-      return embeddings_concat
+    # source = tf.Print(source, [tf.shape(source)], "source shape multi_input_decoder_emb_lookup_fn")
+    #
+    # # source has dims num_outputs x batch x seq_len
+    # if output_idx != None:
+    #   source = tf.Print(source, [tf.shape(source)], "SOURCE",  name="source_print")
+    #   source = source[output_idx, :, :]
+    #
+    # if len(source.get_shape().as_list()) == 2:
+    return tf.nn.embedding_lookup(embedding_encoder, source)
+    # else:
+    #   # batch x seq x num_outputs x embedding_dim
+    #   embeddings = tf.nn.embedding_lookup(embedding_encoder, source)
+    #   embeddings_transpose = tf.transpose(embeddings, [1, 2, 0, 3])
+    #   embeddings_shape = embeddings_transpose.get_shape().as_list()
+    #   embeddings_shape_tensor = tf.shape(embeddings_transpose)
+    #   print("embeddings_shape", embeddings_transpose)
+    #   embeddings_concat = tf.reshape(embeddings_transpose, [embeddings_shape_tensor[0], embeddings_shape_tensor[1], embeddings_shape[2]*embeddings_shape[3]])
+    #   print("embeddings_concat_shape", embeddings_concat)
+    #   return embeddings_concat
 
   def _set_params_initializer(self,
                               hparams,
@@ -173,6 +178,10 @@ class BaseModel(object):
     self.tgt_vocab_sizes = hparams.tgt_vocab_sizes
     self.num_gpus = hparams.num_gpus
     self.time_major = hparams.time_major
+
+    print("src vocab sizes", self.src_vocab_sizes)
+    print("tgt vocab sizes", self.tgt_vocab_sizes)
+
 
     if hparams.use_char_encode:
       assert (not self.time_major), ("Can't use time major for"
@@ -356,7 +365,7 @@ class BaseModel(object):
   # todo: need this to return lists/maps of embedding lookup tables
   def init_embeddings(self, hparams, scope):
     """Init embeddings."""
-    self.embedding_encoders, self.embedding_decoders = (
+    self.embeddings_encoder, self.embeddings_decoder = (
         model_helper.create_emb_for_encoder_and_decoder(
             share_vocab=hparams.share_vocab,
             src_vocab_sizes=self.src_vocab_sizes,
@@ -371,6 +380,10 @@ class BaseModel(object):
             tgt_embed_file=hparams.tgt_embed_file,
             use_char_encode=hparams.use_char_encode,
             scope=scope,))
+
+    print("embeddings encoder sizes", [e for e in self.embeddings_encoder])
+    print("embeddings decoder sizes", [e for e in self.embeddings_decoder])
+
 
   def _get_train_summary(self):
     """Get train summary."""
@@ -467,7 +480,7 @@ class BaseModel(object):
                                                        self.num_gpus)):
               # todo: compute loss wrt each set of labels
               target_output = self.iterator.target_output
-              target_output = tf.Print(target_output, [tf.shape(target_output)], "TARGET OUTPUT", name="target_output_print")
+              # target_output = tf.Print(target_output, [tf.shape(target_output)], "TARGET OUTPUT", name="target_output_print")
 
               this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs, self.output_layers[i],
                                              target_output[:, :, i], self.tgt_vocab_sizes[i])
@@ -564,7 +577,7 @@ class BaseModel(object):
         # decoder_emp_inp: [max_time, batch_size, num_units]
 
         target_input = iterator.target_input
-        target_input = tf.Print(target_input, [tf.shape(target_input)],"TARGET INPUT",  name="target_input_print")
+        # target_input = tf.Print(target_input, [tf.shape(target_input)], "TARGET INPUT",  name="target_input_print")
         target_input = target_input[:, :, output_idx]
         # target_input = tf.Print(target_input, [tf.shape(target_input)], "target input shape")
         # target_input = tf.Print(target_input, [iterator.target_sequence_length], "target sequence lengths", summarize=200)
@@ -574,10 +587,11 @@ class BaseModel(object):
 
         # target_input = tf.Print(target_input, [tf.shape(target_input)], "target input shape after")
 
+        # target_input = tf.Print(target_input, [tf.reduce_max(target_input), tf.shape(self.embeddings_decoder[output_idx])], "shapes")
 
         # todo here is where we decide which target inputs to use during train, all or just one?
         # right now: use just this one
-        decoder_emb_inp = self.multi_input_decoder_emb_lookup_fn(self.embedding_decoders[output_idx], target_input)
+        decoder_emb_inp = self.multi_input_decoder_emb_lookup_fn(self.embeddings_decoder[output_idx], target_input)
 
         # Helper
         helper = tf.contrib.seq2seq.TrainingHelper(
@@ -636,7 +650,7 @@ class BaseModel(object):
           # todo what is embedding decoder
           my_decoder = tf.contrib.seq2seq.BeamSearchDecoder(
               cell=cell,
-              embedding=self.embedding_decoder,
+              embedding=self.embeddings_decoder[output_idx],
               start_tokens=start_tokens,
               end_token=end_token,
               initial_state=decoder_initial_state,
@@ -650,12 +664,12 @@ class BaseModel(object):
               "sampling_temperature must greater than 0.0 when using sample"
               " decoder.")
           helper = tf.contrib.seq2seq.SampleEmbeddingHelper(
-              self.embedding_decoder, start_tokens, end_token,
+              self.embeddings_decoder[output_idx], start_tokens, end_token,
               softmax_temperature=sampling_temperature,
               seed=self.random_seed)
         elif infer_mode == "greedy":
           helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
-              self.embedding_decoder, start_tokens, end_token)
+            self.embeddings_decoder[output_idx], start_tokens, end_token)
         else:
           raise ValueError("Unknown infer_mode '%s'", infer_mode)
 
@@ -714,7 +728,7 @@ class BaseModel(object):
       print("decoder_cell_outputs.shape.ndims:", decoder_cell_outputs.shape.ndims)
 
       if is_sequence:
-        labels = tf.Print(labels, [tf.shape(labels)], "labels rehsape", name="labels_reshape")
+        # labels = tf.Print(labels, [tf.shape(labels)], "labels rehsape", name="labels_reshape")
         labels = tf.reshape(labels, [-1, 1])
         inputs = tf.reshape(decoder_cell_outputs, [-1, self.num_units])
 
@@ -736,7 +750,7 @@ class BaseModel(object):
           crossent = tf.reshape(crossent, [self.batch_size, -1])
 
     else:
-      labels = tf.Print(labels, [tf.shape(labels), tf.shape(logits)], "labels logits", name="labels_logits_print")
+      # labels = tf.Print(labels, [tf.shape(labels), tf.shape(logits)], "labels logits", name="labels_logits_print")
       crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(
           labels=labels, logits=logits)
 
@@ -841,7 +855,8 @@ class Model(BaseModel):
     with tf.variable_scope("encoder") as scope:
       dtype = scope.dtype
 
-      self.encoder_emb_inp = self.encoder_emb_lookup_fn(self.embedding_encoders, sequence)
+      # sequence = tf.Print(sequence, [tf.shape(sequence)], "SOURCE SHAPE _build_encoder_from_sequence")
+      self.encoder_emb_inp = self.encoder_emb_lookup_fn(self.embeddings_encoder, sequence)
 
       print("encoder emb input", self.encoder_emb_inp)
 

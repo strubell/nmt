@@ -393,7 +393,7 @@ def create_emb_for_encoder_and_decoder(share_vocab,
 
       # todo load multiple vocabs here
       with tf.variable_scope("decoder", partitioner=dec_partitioner):
-        for i, vocab_size in enumerate(src_vocab_sizes):
+        for i, vocab_size in enumerate(tgt_vocab_sizes):
           this_vocab_file = tgt_vocab_file.split('.')[0] + str(i) + "." + tgt_vocab_file.split('.')[1]
           embedding_decoder = _create_or_load_embed(
               "embedding_decoder_%d" % i, this_vocab_file, tgt_embed_file, vocab_size, tgt_embed_size, dtype)
