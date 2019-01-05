@@ -386,7 +386,7 @@ def create_emb_for_encoder_and_decoder(share_vocab,
           for i, vocab_size in enumerate(src_vocab_sizes):
             this_vocab_file = src_vocab_file.split('.')[0] + str(i) + "." + src_vocab_file.split('.')[1]
             embedding_encoder = _create_or_load_embed(
-                "embedding_encoder", this_vocab_file, src_embed_file, vocab_size, src_embed_size, dtype)
+                "embedding_encoder_%d" % i, this_vocab_file, src_embed_file, vocab_size, src_embed_size, dtype)
             embedding_encoders.append(embedding_encoder)
       else:
         embedding_encoder = None
@@ -396,7 +396,7 @@ def create_emb_for_encoder_and_decoder(share_vocab,
         for i, vocab_size in enumerate(src_vocab_sizes):
           this_vocab_file = tgt_vocab_file.split('.')[0] + str(i) + "." + tgt_vocab_file.split('.')[1]
           embedding_decoder = _create_or_load_embed(
-              "embedding_decoder", this_vocab_file, tgt_embed_file, vocab_size, tgt_embed_size, dtype)
+              "embedding_decoder_%d" % i, this_vocab_file, tgt_embed_file, vocab_size, tgt_embed_size, dtype)
           embedding_decoders.append(embedding_decoder)
 
   return embedding_encoders, embedding_decoders
