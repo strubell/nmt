@@ -58,20 +58,21 @@ def decode_and_evaluate(name,
       while True:
         try:
           nmt_outputs, _ = model.decode(sess)
-          if infer_mode != "beam_search":
-            nmt_outputs = np.expand_dims(nmt_outputs, 0)
+          for nmt_output in nmt_outputs:
+            if infer_mode != "beam_search":
+              nmt_output = np.expand_dims(nmt_output, 0)
 
-          batch_size = nmt_outputs.shape[1]
-          num_sentences += batch_size
+            batch_size = nmt_output.shape[1]
+            num_sentences += batch_size
 
-          for sent_id in range(batch_size):
-            for beam_id in range(num_translations_per_input):
-              translation = get_translation(
-                  nmt_outputs[beam_id],
-                  sent_id,
-                  tgt_eos=tgt_eos,
-                  subword_option=subword_option)
-              trans_f.write((translation + b"\n").decode("utf-8"))
+            for sent_id in range(batch_size):
+              for beam_id in range(num_translations_per_input):
+                translation = get_translation(
+                    [nmt_output[beam_id]],
+                    sent_id,
+                    tgt_eos=tgt_eos,
+                    subword_option=subword_option)[0]
+                trans_f.write((translation + b"\n").decode("utf-8"))
         except tf.errors.OutOfRangeError:
           utils.print_time(
               "  done, num sentences %d, num translations per input %d" %
@@ -97,17 +98,20 @@ def get_translation(nmt_outputs, sent_id, tgt_eos, subword_option):
   """Given batch decoding outputs, select a sentence and turn to text."""
   if tgt_eos: tgt_eos = tgt_eos.encode("utf-8")
   # Select a sentence
-  output = nmt_outputs[sent_id, :].tolist()
+  translations = []
+  for nmt_output in nmt_outputs:
+    output = nmt_output[sent_id, :].tolist()
 
-  # If there is an eos symbol in outputs, cut them at that point.
-  if tgt_eos and tgt_eos in output:
-    output = output[:output.index(tgt_eos)]
+    # If there is an eos symbol in outputs, cut them at that point.
+    if tgt_eos and tgt_eos in output:
+      output = output[:output.index(tgt_eos)]
 
-  if subword_option == "bpe":  # BPE
-    translation = utils.format_bpe_text(output)
-  elif subword_option == "spm":  # SPM
-    translation = utils.format_spm_text(output)
-  else:
-    translation = utils.format_text(output)
+    if subword_option == "bpe":  # BPE
+      translation = utils.format_bpe_text(output)
+    elif subword_option == "spm":  # SPM
+      translation = utils.format_spm_text(output)
+    else:
+      translation = utils.format_text(output)
+    translations.append(translation)
 
-  return translation
+  return translations

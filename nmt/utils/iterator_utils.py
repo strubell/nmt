@@ -34,8 +34,16 @@ class BatchedInput(
   pass
 
 
+def lookup_sep_vocabs(vocab_tables, input):
+  mapped_tensors = []
+  for i, vocab_table in enumerate(vocab_tables):
+    mapped_tensor = tf.expand_dims(tf.cast(vocab_table.lookup(input[:, i]), tf.int32), -1)
+    mapped_tensors.append(mapped_tensor)
+  return tf.concat(mapped_tensors, axis=-1)
+
+
 def get_infer_iterator(src_dataset,
-                       src_vocab_table,
+                       src_vocab_tables,
                        batch_size,
                        eos,
                        src_max_len=None,
@@ -44,7 +52,8 @@ def get_infer_iterator(src_dataset,
   if use_char_encode:
     src_eos_id = vocab_utils.EOS_CHAR_ID
   else:
-    src_eos_id = tf.cast(src_vocab_table.lookup(tf.constant(eos)), tf.int32)
+    # todo assumes all same
+    src_eos_id = tf.cast(src_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
   src_dataset = src_dataset.map(lambda src: tf.string_split([src]).values)
 
   src_dataset = src_dataset.map(lambda src: tf.string_split(src, delimiter=vocab_utils.INPUT_DELIM))
@@ -65,16 +74,16 @@ def get_infer_iterator(src_dataset,
     # Convert the word strings to ids
     # todo deal with multiple here
     src_dataset = src_dataset.map(
-        lambda src: tf.cast(src_vocab_table.lookup(src), tf.int32))
+        lambda src: lookup_sep_vocabs(src_vocab_tables, src))
 
   # Add in the word counts.
   if use_char_encode:
     src_dataset = src_dataset.map(
         lambda src: (src,
                      tf.to_int32(
-                         tf.size(src) / vocab_utils.DEFAULT_CHAR_MAXLEN)))
+                         tf.shape(src)[0] / vocab_utils.DEFAULT_CHAR_MAXLEN)))
   else:
-    src_dataset = src_dataset.map(lambda src: (src, tf.size(src)))
+    src_dataset = src_dataset.map(lambda src: (src, tf.shape(src)[0]))
 
   def batching_func(x):
     return x.padded_batch(
@@ -83,7 +92,7 @@ def get_infer_iterator(src_dataset,
         # this has unknown-length vectors.  The last entry is
         # the source row size; this is a scalar.
         padded_shapes=(
-            tf.TensorShape([None, vocab_utils.NUM_INPUTS]),  # src
+            tf.TensorShape([None, vocab_utils.NUM_INPUTS_PER_TIMESTEP]),  # src
             tf.TensorShape([])),  # src_len
         # Pad the source sequences with eos tokens.
         # (Though notice we don't generally need to do this since
@@ -106,8 +115,8 @@ def get_infer_iterator(src_dataset,
 
 def get_iterator(src_dataset,
                  tgt_dataset,
-                 src_vocab_table,
-                 tgt_vocab_table,
+                 src_vocab_tables,
+                 tgt_vocab_tables,
                  batch_size,
                  sos,
                  eos,
@@ -128,13 +137,13 @@ def get_iterator(src_dataset,
   if use_char_encode:
     src_eos_id = vocab_utils.EOS_CHAR_ID
   else:
-    src_eos_id = tf.cast(src_vocab_table.lookup(tf.constant(eos)), tf.int32)
+    src_eos_id = tf.cast(src_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
-  tgt_sos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(sos)), tf.int32)
-  tgt_eos_id = tf.cast(tgt_vocab_table.lookup(tf.constant(eos)), tf.int32)
+  tgt_sos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(sos)), tf.int32)
+  tgt_eos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
-  print(tgt_sos_id)
-  tgt_sos_id = tf.Print(tgt_sos_id, [tgt_sos_id], "tgt_sos_id")
+  tgt_sos_ids = tf.cast(tf.stack([tgt_vocab_table.lookup(tf.constant(sos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
+  tgt_eos_ids = tf.cast(tf.stack([tgt_vocab_table.lookup(tf.constant(eos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
 
   src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
@@ -152,7 +161,6 @@ def get_iterator(src_dataset,
 
   src_tgt_dataset = src_tgt_dataset.map(
     lambda src, tgt: (
-      # tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
       tf.string_split(src, delimiter=vocab_utils.INPUT_DELIM),
       tf.string_split(tgt, delimiter=vocab_utils.INPUT_DELIM)),
     num_parallel_calls=num_parallel_calls)
@@ -160,14 +168,13 @@ def get_iterator(src_dataset,
   # string_split returns a sparse tensor, but we want it to be dense
   src_tgt_dataset = src_tgt_dataset.map(
     lambda src, tgt: (
-      # tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
       tf.sparse_to_dense(src.indices, src.dense_shape, src.values, default_value=''),
       tf.sparse_to_dense(tgt.indices, tgt.dense_shape, tgt.values, default_value='')),
     num_parallel_calls=num_parallel_calls)
 
   # Filter zero length input sequences.
   src_tgt_dataset = src_tgt_dataset.filter(
-      lambda src, tgt: tf.logical_and(tf.size(src) > 0, tf.size(tgt) > 0))
+      lambda src, tgt: tf.logical_and(tf.shape(src)[0] > 0, tf.shape(tgt)[0] > 0))
 
   if src_max_len:
     src_tgt_dataset = src_tgt_dataset.map(
@@ -181,44 +188,37 @@ def get_iterator(src_dataset,
   # Convert the word strings to ids.  Word strings that are not in the
   # vocab get the lookup table's default_value integer.
   if use_char_encode:
-    # this is broken
+    # todo this is broken (but it shouldn't matter for us)
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt: (tf.reshape(vocab_utils.tokens_to_bytes(src), [-1]),
-                          tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
+                          tf.cast(tgt_vocab_tables.lookup(tgt), tf.int32)),
         num_parallel_calls=num_parallel_calls)
   else:
     src_tgt_dataset = src_tgt_dataset.map(
-        lambda src, tgt: (tf.cast(src_vocab_table.lookup(src), tf.int32),
-                          tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
+        lambda src, tgt: (lookup_sep_vocabs(src_vocab_tables, src),
+                          lookup_sep_vocabs(tgt_vocab_tables, tgt)),
         num_parallel_calls=num_parallel_calls)
-
 
   src_tgt_dataset = src_tgt_dataset.prefetch(output_buffer_size)
   # Create a tgt_input prefixed with <sos> and a tgt_output suffixed with <eos>.
   src_tgt_dataset = src_tgt_dataset.map(
       lambda src, tgt: (src,
-                        # tf.concat(([tgt_sos_id], tgt), 0),
-                        # tf.concat((tgt, [tgt_eos_id]), 0)),
-                        # tf.concat((tf.fill([1, num_inputs], tgt_sos_id), tgt), 0),
-                        # tf.concat((tgt, tf.fill([1, num_inputs], tgt_eos_id)), 0)),
-                        tf.concat(([tgt_sos_id], tgt[:,0]), 0),
-                        tf.concat((tgt[:,0], [tgt_eos_id]), 0)),
-
-                        # tf.concat((tf.constant(sos, shape=[1, num_inputs]), tgt), 0),
-                        # tf.concat((tgt, tf.constant(eos, shape=[1, num_inputs])), 0)),
+                        tf.concat((tf.expand_dims(tgt_sos_ids, 0), tgt), 0),
+                        tf.concat((tgt, tf.expand_dims(tgt_eos_ids, 0)), 0)),
                         num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
+
   # Add in sequence lengths.
   if use_char_encode:
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt_in, tgt_out: (
             src, tgt_in, tgt_out,
-            tf.to_int32(tf.size(src) / vocab_utils.DEFAULT_CHAR_MAXLEN),
-            tf.size(tgt_in)),
+            tf.to_int32(tf.shape(src)[0] / vocab_utils.DEFAULT_CHAR_MAXLEN),
+            tf.shape(tgt_in)[0]),
         num_parallel_calls=num_parallel_calls)
   else:
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt_in, tgt_out: (
-            src, tgt_in, tgt_out, tf.size(src), tf.size(tgt_in)),
+            src, tgt_in, tgt_out, tf.shape(src)[0], tf.shape(tgt_in)[0]),
         num_parallel_calls=num_parallel_calls)
 
   src_tgt_dataset = src_tgt_dataset.prefetch(output_buffer_size)
@@ -231,11 +231,9 @@ def get_iterator(src_dataset,
         # these have unknown-length vectors.  The last two entries are
         # the source and target row sizes; these are scalars.
         padded_shapes=(
-            tf.TensorShape([None, vocab_utils.NUM_INPUTS]),  # src
-            tf.TensorShape([None]),  # tgt_input
-            tf.TensorShape([None]),  # tgt_output
-            # tf.TensorShape([None, num_inputs]),  # tgt_input
-            # tf.TensorShape([None, num_inputs]),  # tgt_output
+            tf.TensorShape([None, vocab_utils.NUM_INPUTS_PER_TIMESTEP]),  # src
+            tf.TensorShape([None, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP]),  # tgt_input
+            tf.TensorShape([None, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP]),  # tgt_output
             tf.TensorShape([]),  # src_len
             tf.TensorShape([])),  # tgt_len
         # Pad the source and target sequences with eos tokens.
@@ -243,15 +241,11 @@ def get_iterator(src_dataset,
         # later on we will be masking out calculations past the true sequence.
         padding_values=(
             src_eos_id,  # src
-            tgt_eos_id,  # tgt_input
-            tgt_eos_id,  # tgt_output
+            # this assumes they're the same across outputs
+            tgt_eos_id,
+            tgt_eos_id,
             0,  # src_len -- unused
             0))  # tgt_len -- unused
-            #   eos,  # src
-            #   eos,  # tgt_input
-            #   eos,  # tgt_output
-            #   0,  # src_len -- unused
-            #   0))  # tgt
 
   if num_buckets > 1:
 
@@ -284,7 +278,8 @@ def get_iterator(src_dataset,
   # with tf.Session() as sess:
   #   sess.run(tf.tables_initializer())
   #   sess.run(tf.global_variables_initializer())
-  #   sess.run(batched_iter.initializer,feed_dict={skip_count: 3})
+  #   sess.run(batched_iter.initializer, feed_dict={skip_count: 0})
+  #   # sess.run(batched_iter.initializer)
   #   print("BATCH:", sess.run(batched_iter.get_next()))
   #   # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
 

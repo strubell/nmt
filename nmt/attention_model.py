@@ -39,9 +39,9 @@ class AttentionModel(model.Model):
                hparams,
                mode,
                iterator,
-               source_vocab_table,
-               target_vocab_table,
-               reverse_target_vocab_table=None,
+               source_vocab_tables,
+               target_vocab_tables,
+               reverse_target_vocab_tables=None,
                scope=None,
                extra_args=None):
     self.has_attention = hparams.attention_architecture and hparams.attention
@@ -57,9 +57,9 @@ class AttentionModel(model.Model):
         hparams=hparams,
         mode=mode,
         iterator=iterator,
-        source_vocab_table=source_vocab_table,
-        target_vocab_table=target_vocab_table,
-        reverse_target_vocab_table=reverse_target_vocab_table,
+        source_vocab_tables=source_vocab_tables,
+        target_vocab_tables=target_vocab_tables,
+        reverse_target_vocab_tables=reverse_target_vocab_tables,
         scope=scope,
         extra_args=extra_args)
 
@@ -149,7 +149,9 @@ class AttentionModel(model.Model):
   def _get_infer_summary(self, hparams):
     if not self.has_attention or hparams.infer_mode == "beam_search":
       return tf.no_op()
-    return _create_attention_images_summary(self.final_context_state)
+    # todo can change this if we want other attention images
+
+    return _create_attention_images_summary(self.final_context_states[0])
 
 
 def create_attention_mechanism(attention_option, num_units, memory,
@@ -183,6 +185,7 @@ def create_attention_mechanism(attention_option, num_units, memory,
 
 
 def _create_attention_images_summary(final_context_state):
+  print("final context state", final_context_state)
   """create attention image and attention summary."""
   attention_images = (final_context_state.alignment_history.stack())
   # Reshape to (batch, src_seq_len, tgt_seq_len,1)

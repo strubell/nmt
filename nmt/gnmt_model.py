@@ -77,17 +77,13 @@ class GNMTModel(attention_model.AttentionModel):
     with tf.variable_scope("encoder") as scope:
       dtype = scope.dtype
 
-      # todo: change this to concat all of our inputs
-      self.encoder_emb_inp = self.encoder_emb_lookup_fn(
-          self.embedding_encoder, source)
+      self.encoder_emb_inp = self.encoder_emb_lookup_fn(self.embeddings_encoder, source)
 
-      print("encoder emb input", self.encoder_emb_inp)
-
-      with tf.Session() as sess:
-        sess.run(tf.tables_initializer())
-        sess.run(tf.global_variables_initializer())
-        sess.run(iterator.initializer, feed_dict={'skip_count': 3})
-        print("BATCH:", sess.run(source))
+      # with tf.Session() as sess:
+      #   sess.run(tf.tables_initializer())
+      #   sess.run(tf.global_variables_initializer())
+      #   sess.run(iterator.initializer, feed_dict={'skip_count': 3})
+      #   print("BATCH:", sess.run(source))
 
       # Execute _build_bidirectional_rnn from Model class
       bi_encoder_outputs, bi_encoder_state = self._build_bidirectional_rnn(
