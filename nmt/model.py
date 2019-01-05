@@ -106,7 +106,7 @@ class BaseModel(object):
   # todo: fix: want to lookup each one in its encoder and concatenate
   def multi_input_encoder_emb_lookup_fn(self, embedding_encoders, source):
     embeddings = []
-    for i, embedding_encoder in embedding_encoders:
+    for i, embedding_encoder in enumerate(embedding_encoders):
       embeddings.append(tf.nn.embedding_lookup(embedding_encoder, source[:, :, i]))
     embeddings_concat = tf.concat(embeddings, axis=-1)
     print(embeddings_concat)
