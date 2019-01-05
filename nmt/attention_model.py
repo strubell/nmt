@@ -150,6 +150,7 @@ class AttentionModel(model.Model):
     if not self.has_attention or hparams.infer_mode == "beam_search":
       return tf.no_op()
     # todo can change this if we want other attention images
+
     return _create_attention_images_summary(self.final_context_states[0])
 
 
@@ -184,6 +185,7 @@ def create_attention_mechanism(attention_option, num_units, memory,
 
 
 def _create_attention_images_summary(final_context_state):
+  print("final context state", final_context_state)
   """create attention image and attention summary."""
   attention_images = (final_context_state.alignment_history.stack())
   # Reshape to (batch, src_seq_len, tgt_seq_len,1)

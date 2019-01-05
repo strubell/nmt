@@ -37,6 +37,8 @@ class BatchedInput(
 def lookup_sep_vocabs(vocab_tables, input):
   mapped_tensors = []
   for i, vocab_table in enumerate(vocab_tables):
+    # input = tf.Print(input, [tf.equal(tf.shape(input)[1], 2)], "input shape")
+    # input = tf.Print(input, [input], "input")
     mapped_tensor = tf.expand_dims(tf.cast(vocab_table.lookup(input[:, i]), tf.int32), -1)
     mapped_tensors.append(mapped_tensor)
   return tf.concat(mapped_tensors, axis=-1)

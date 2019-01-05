@@ -455,22 +455,23 @@ class BaseModel(object):
         # target_output = tf.Print(target_output, [tf.shape(target_output)], "target output build_graph")
 
 
-        ## Loss
-        if self.mode != tf.contrib.learn.ModeKeys.INFER:
-          with tf.device(model_helper.get_device_str(self.num_encoder_layers - 1,
-                                                     self.num_gpus)):
-            # todo: compute loss wrt each set of labels
-            target_output = self.iterator.target_output
-            target_output = tf.Print(target_output, [tf.shape(target_output)], "TARGET OUTPUT", name="target_output_print")
+          ## Loss
+          if self.mode != tf.contrib.learn.ModeKeys.INFER:
+            with tf.device(model_helper.get_device_str(self.num_encoder_layers - 1,
+                                                       self.num_gpus)):
+              # todo: compute loss wrt each set of labels
+              target_output = self.iterator.target_output
+              target_output = tf.Print(target_output, [tf.shape(target_output)], "TARGET OUTPUT", name="target_output_print")
 
-            this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs, self.output_layers[i],
-                                           target_output[:, :, i])
-            loss += this_loss
-        # else:
-          # loss = tf.constant(0.0)
-        logits.append(this_logits)
-        final_context_states.append(this_final_context_state)
-        sample_ids.append(this_sample_id)
+              # this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs, self.output_layers[i],
+              #                                target_output[:, :, i])
+              # loss += this_loss
+              loss += tf.nn.l2_loss(tf.get_variable("dumb", [10,10]))
+          # else:
+            # loss = tf.constant(0.0)
+          logits.append(this_logits)
+          final_context_states.append(this_final_context_state)
+          sample_ids.append(this_sample_id)
 
       # todo are these all needed
       return logits, loss, final_context_states, sample_ids
