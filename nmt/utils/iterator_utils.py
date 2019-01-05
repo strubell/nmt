@@ -37,8 +37,6 @@ class BatchedInput(
 def lookup_sep_vocabs(vocab_tables, input):
   mapped_tensors = []
   for i, vocab_table in enumerate(vocab_tables):
-    # input = tf.Print(input, [tf.equal(tf.shape(input)[1], 2)], "input shape")
-    # input = tf.Print(input, [input], "input")
     mapped_tensor = tf.expand_dims(tf.cast(vocab_table.lookup(input[:, i]), tf.int32), -1)
     mapped_tensors.append(mapped_tensor)
   return tf.concat(mapped_tensors, axis=-1)
@@ -141,19 +139,11 @@ def get_iterator(src_dataset,
   else:
     src_eos_id = tf.cast(src_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
-  # todo: need to handle multiple vocabs here
-  # todo don't hardcode this
-  # num_inputs = 2
-
   tgt_sos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(sos)), tf.int32)
   tgt_eos_id = tf.cast(tgt_vocab_tables[0].lookup(tf.constant(eos)), tf.int32)
 
   tgt_sos_ids = tf.cast(tf.stack([tgt_vocab_table.lookup(tf.constant(sos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
   tgt_eos_ids = tf.cast(tf.stack([tgt_vocab_table.lookup(tf.constant(eos)) for tgt_vocab_table in tgt_vocab_tables]), tf.int32)
-
-
-  # print(tgt_sos_id)
-  # tgt_sos_id = tf.Print(tgt_sos_id, [tgt_sos_id], "tgt_sos_id")
 
   src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
@@ -171,7 +161,6 @@ def get_iterator(src_dataset,
 
   src_tgt_dataset = src_tgt_dataset.map(
     lambda src, tgt: (
-      # tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
       tf.string_split(src, delimiter=vocab_utils.INPUT_DELIM),
       tf.string_split(tgt, delimiter=vocab_utils.INPUT_DELIM)),
     num_parallel_calls=num_parallel_calls)
@@ -179,7 +168,6 @@ def get_iterator(src_dataset,
   # string_split returns a sparse tensor, but we want it to be dense
   src_tgt_dataset = src_tgt_dataset.map(
     lambda src, tgt: (
-      # tf.string_split(src, delimiter="_").values, tf.string_split(tgt, delimiter="_").values),
       tf.sparse_to_dense(src.indices, src.dense_shape, src.values, default_value=''),
       tf.sparse_to_dense(tgt.indices, tgt.dense_shape, tgt.values, default_value='')),
     num_parallel_calls=num_parallel_calls)
@@ -200,15 +188,13 @@ def get_iterator(src_dataset,
   # Convert the word strings to ids.  Word strings that are not in the
   # vocab get the lookup table's default_value integer.
   if use_char_encode:
-    # this is broken
+    # todo this is broken (but it shouldn't matter for us)
     src_tgt_dataset = src_tgt_dataset.map(
         lambda src, tgt: (tf.reshape(vocab_utils.tokens_to_bytes(src), [-1]),
                           tf.cast(tgt_vocab_tables.lookup(tgt), tf.int32)),
         num_parallel_calls=num_parallel_calls)
   else:
     src_tgt_dataset = src_tgt_dataset.map(
-        # lambda src, tgt: (tf.cast(src_vocab_table.lookup(src), tf.int32),
-        #                   tf.cast(tgt_vocab_table.lookup(tgt), tf.int32)),
         lambda src, tgt: (lookup_sep_vocabs(src_vocab_tables, src),
                           lookup_sep_vocabs(tgt_vocab_tables, tgt)),
         num_parallel_calls=num_parallel_calls)
@@ -217,18 +203,8 @@ def get_iterator(src_dataset,
   # Create a tgt_input prefixed with <sos> and a tgt_output suffixed with <eos>.
   src_tgt_dataset = src_tgt_dataset.map(
       lambda src, tgt: (src,
-                        # tf.concat(([tgt_sos_id], tgt), 0),
-                        # tf.concat((tgt, [tgt_eos_id]), 0)),
-                        # tf.concat((tf.fill([1, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP], 0), tgt), 0),
-                        # tf.concat((tgt, tf.fill([1, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP], 0)), 0)),
                         tf.concat((tf.expand_dims(tgt_sos_ids, 0), tgt), 0),
                         tf.concat((tgt, tf.expand_dims(tgt_eos_ids, 0)), 0)),
-                        # these just pull out the first thing (for predicting one)
-                        # tf.concat(([tgt_sos_id], tgt[:,0]), 0),
-                        # tf.concat((tgt[:,0], [tgt_eos_id]), 0)),
-
-                        # tf.concat((tf.constant(sos, shape=[1, num_inputs]), tgt), 0),
-                        # tf.concat((tgt, tf.constant(eos, shape=[1, num_inputs])), 0)),
                         num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
 
   # Add in sequence lengths.
@@ -258,8 +234,6 @@ def get_iterator(src_dataset,
             tf.TensorShape([None, vocab_utils.NUM_INPUTS_PER_TIMESTEP]),  # src
             tf.TensorShape([None, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP]),  # tgt_input
             tf.TensorShape([None, vocab_utils.NUM_OUTPUTS_PER_TIMESTEP]),  # tgt_output
-            # tf.TensorShape([None, num_inputs]),  # tgt_input
-            # tf.TensorShape([None, num_inputs]),  # tgt_output
             tf.TensorShape([]),  # src_len
             tf.TensorShape([])),  # tgt_len
         # Pad the source and target sequences with eos tokens.
@@ -270,15 +244,8 @@ def get_iterator(src_dataset,
             # this assumes they're the same across outputs
             tgt_eos_id,
             tgt_eos_id,
-            # tgt_eos_ids[0],  # tgt_input
-            # tgt_eos_ids[0],  # tgt_output
             0,  # src_len -- unused
             0))  # tgt_len -- unused
-            #   eos,  # src
-            #   eos,  # tgt_input
-            #   eos,  # tgt_output
-            #   0,  # src_len -- unused
-            #   0))  # tgt
 
   if num_buckets > 1:
 

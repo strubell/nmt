@@ -77,11 +77,8 @@ class GNMTModel(attention_model.AttentionModel):
     with tf.variable_scope("encoder") as scope:
       dtype = scope.dtype
 
-      # source = tf.Print(source, [tf.shape(source)], "SOURCE SHAPE _build_encoder")
       self.encoder_emb_inp = self.encoder_emb_lookup_fn(self.embeddings_encoder, source)
 
-      # print("encoder emb input", self.encoder_emb_inp)
-      #
       # with tf.Session() as sess:
       #   sess.run(tf.tables_initializer())
       #   sess.run(tf.global_variables_initializer())
