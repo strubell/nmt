@@ -11,8 +11,8 @@ python -m nmt.nmt \
     --dev_prefix=$data_dir/tst2012  \
     --test_prefix=$data_dir/tst2013 \
     --out_dir=nmt_model_multi_out \
-    --num_train_steps=12000 \
-    --steps_per_stats=100 \
+    --num_train_steps=10000000 \
+    --steps_per_stats=1000 \
     --num_layers=2 \
     --num_units=128 \
     --dropout=0.2 \
