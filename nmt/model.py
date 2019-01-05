@@ -103,30 +103,36 @@ class BaseModel(object):
 
   # lookup and concat source inputs
   # before: tf.nn.embedding_lookup(embedding_encoder, source)
-  def multi_input_encoder_emb_lookup_fn(self, embedding_encoder, source):
+  # todo: fix: want to lookup each one in its encoder and concatenate
+  def multi_input_encoder_emb_lookup_fn(self, embedding_encoders, source):
+    embeddings = []
+    for i, embedding_encoder in embedding_encoders:
+      embeddings.append(tf.nn.embedding_lookup(embedding_encoder, source[:, :, i]))
+    embeddings_concat = tf.concat(embeddings, axis=-1)
+    print(embeddings_concat)
+    return embeddings_concat
+    # # print(source)
+    # # print("dims:", len(source.get_shape().as_list()))
+    # # if len(source.get_shape().as_list()) == 2:
+    # #   return tf.nn.embedding_lookup(embedding_encoder, source)
+    # # else:
+    # # batch x seq x 2 x embedding_dim
+    # embeddings = tf.nn.embedding_lookup(embedding_encoders[input_idx], source)
+    # embeddings_transpose = tf.transpose(embeddings, [1, 2, 0, 3])
+    # embeddings_shape = embeddings_transpose.get_shape().as_list()
+    # embeddings_shape_tensor = tf.shape(embeddings_transpose)
+    # print("embeddings_shape", embeddings_transpose)
+    # embeddings_concat = tf.reshape(embeddings_transpose, [embeddings_shape_tensor[0], embeddings_shape_tensor[1], embeddings_shape[2]*embeddings_shape[3]])
+    # print("embeddings_concat_shape", embeddings_concat)
+    # return embeddings_concat
+    # with tf.Session() as sess:
+    #   sess.run(tf.tables_initializer())
+    #   sess.run(tf.global_variables_initializer())
+    #   sess.run(batched_iter.initializer,feed_dict={skip_count: 3})
+    #   print("BATCH:", sess.run(source))
+    #   # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
 
-    print(source)
-    print("dims:", len(source.get_shape().as_list()))
-    if len(source.get_shape().as_list()) == 2:
-      return tf.nn.embedding_lookup(embedding_encoder, source)
-    else:
-      # batch x seq x 2 x embedding_dim
-      embeddings = tf.nn.embedding_lookup(embedding_encoder, source)
-      embeddings_transpose = tf.transpose(embeddings, [1, 2, 0, 3])
-      embeddings_shape = embeddings_transpose.get_shape().as_list()
-      embeddings_shape_tensor = tf.shape(embeddings_transpose)
-      print("embeddings_shape", embeddings_transpose)
-      embeddings_concat = tf.reshape(embeddings_transpose, [embeddings_shape_tensor[0], embeddings_shape_tensor[1], embeddings_shape[2]*embeddings_shape[3]])
-      print("embeddings_concat_shape", embeddings_concat)
-      return embeddings_concat
-      # with tf.Session() as sess:
-      #   sess.run(tf.tables_initializer())
-      #   sess.run(tf.global_variables_initializer())
-      #   sess.run(batched_iter.initializer,feed_dict={skip_count: 3})
-      #   print("BATCH:", sess.run(source))
-      #   # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
-
-
+  # todo: same as above i think
   def multi_input_decoder_emb_lookup_fn(self, embedding_encoder, source, output_idx=None):
 
     # source has dims num_outputs x batch x seq_len
@@ -163,8 +169,8 @@ class BaseModel(object):
     self.tgt_vocab_tables = target_vocab_tables
 
     # todo these need to be lists/maps
-    self.src_vocab_size = hparams.src_vocab_size
-    self.tgt_vocab_size = hparams.tgt_vocab_size
+    self.src_vocab_sizes = hparams.src_vocab_sizes
+    self.tgt_vocab_sizes = hparams.tgt_vocab_sizes
     self.num_gpus = hparams.num_gpus
     self.time_major = hparams.time_major
 
@@ -350,11 +356,11 @@ class BaseModel(object):
   # todo: need this to return lists/maps of embedding lookup tables
   def init_embeddings(self, hparams, scope):
     """Init embeddings."""
-    self.embedding_encoder, self.embedding_decoder = (
+    self.embedding_encoders, self.embedding_decoders = (
         model_helper.create_emb_for_encoder_and_decoder(
             share_vocab=hparams.share_vocab,
-            src_vocab_size=self.src_vocab_size,
-            tgt_vocab_size=self.tgt_vocab_size,
+            src_vocab_sizes=self.src_vocab_sizes,
+            tgt_vocab_sizes=self.tgt_vocab_sizes,
             src_embed_size=self.num_units,
             tgt_embed_size=self.num_units,
             num_enc_partitions=hparams.num_enc_emb_partitions,
@@ -571,7 +577,7 @@ class BaseModel(object):
 
         # todo here is where we decide which target inputs to use during train, all or just one?
         # right now: use just this one
-        decoder_emb_inp = self.multi_input_decoder_emb_lookup_fn(self.embedding_decoder, target_input)
+        decoder_emb_inp = self.multi_input_decoder_emb_lookup_fn(self.embedding_decoders[output_idx], target_input)
 
         # Helper
         helper = tf.contrib.seq2seq.TrainingHelper(
@@ -835,8 +841,7 @@ class Model(BaseModel):
     with tf.variable_scope("encoder") as scope:
       dtype = scope.dtype
 
-      self.encoder_emb_inp = self.encoder_emb_lookup_fn(
-          self.embedding_encoder, sequence)
+      self.encoder_emb_inp = self.encoder_emb_lookup_fn(self.embedding_encoders, sequence)
 
       print("encoder emb input", self.encoder_emb_inp)
 

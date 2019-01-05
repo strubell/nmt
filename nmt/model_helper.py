@@ -293,8 +293,8 @@ def _create_or_load_embed(embed_name, vocab_file, embed_file,
 
 
 def create_emb_for_encoder_and_decoder(share_vocab,
-                                       src_vocab_size,
-                                       tgt_vocab_size,
+                                       src_vocab_sizes,
+                                       tgt_vocab_sizes,
                                        src_embed_size,
                                        tgt_embed_size,
                                        dtype=tf.float32,
@@ -362,36 +362,44 @@ def create_emb_for_encoder_and_decoder(share_vocab,
 
   with tf.variable_scope(
       scope or "embeddings", dtype=dtype, partitioner=enc_partitioner) as scope:
+    embedding_encoders = []
+    embedding_decoders = []
     # Share embedding
     if share_vocab:
-      if src_vocab_size != tgt_vocab_size:
+      if src_vocab_sizes != tgt_vocab_sizes:
         raise ValueError("Share embedding but different src/tgt vocab sizes"
-                         " %d vs. %d" % (src_vocab_size, tgt_vocab_size))
+                         " %d vs. %d" % (src_vocab_sizes, tgt_vocab_sizes))
       assert src_embed_size == tgt_embed_size
       utils.print_out("# Use the same embedding for source and target")
       vocab_file = src_vocab_file or tgt_vocab_file
       embed_file = src_embed_file or tgt_embed_file
 
-      embedding_encoder = _create_or_load_embed(
-          "embedding_share", vocab_file, embed_file,
-          src_vocab_size, src_embed_size, dtype)
-      embedding_decoder = embedding_encoder
+      for i, vocab_size in enumerate(src_vocab_sizes):
+        this_vocab_file = vocab_file.split('.')[0] + str(i) + "." + vocab_file.split('.')[1]
+        embedding_encoder = _create_or_load_embed(
+            "embedding_share_%d" % i, this_vocab_file, embed_file, vocab_size, src_embed_size, dtype)
+        embedding_encoders.append(embedding_encoder)
+      embedding_decoders = embedding_encoders
     else:
       if not use_char_encode:
         with tf.variable_scope("encoder", partitioner=enc_partitioner):
-          embedding_encoder = _create_or_load_embed(
-              "embedding_encoder", src_vocab_file, src_embed_file,
-              src_vocab_size, src_embed_size, dtype)
+          for i, vocab_size in enumerate(src_vocab_sizes):
+            this_vocab_file = src_vocab_file.split('.')[0] + str(i) + "." + src_vocab_file.split('.')[1]
+            embedding_encoder = _create_or_load_embed(
+                "embedding_encoder", this_vocab_file, src_embed_file, vocab_size, src_embed_size, dtype)
+            embedding_encoders.append(embedding_encoder)
       else:
         embedding_encoder = None
 
       # todo load multiple vocabs here
       with tf.variable_scope("decoder", partitioner=dec_partitioner):
-        embedding_decoder = _create_or_load_embed(
-            "embedding_decoder", tgt_vocab_file, tgt_embed_file,
-            tgt_vocab_size, tgt_embed_size, dtype)
+        for i, vocab_size in enumerate(src_vocab_sizes):
+          this_vocab_file = tgt_vocab_file.split('.')[0] + str(i) + "." + tgt_vocab_file.split('.')[1]
+          embedding_decoder = _create_or_load_embed(
+              "embedding_decoder", this_vocab_file, tgt_embed_file, vocab_size, tgt_embed_size, dtype)
+          embedding_decoders.append(embedding_decoder)
 
-  return embedding_encoder, embedding_decoder
+  return embedding_encoders, embedding_decoders
 
 
 def _single_cell(unit_type, num_units, forget_bias, dropout, mode,

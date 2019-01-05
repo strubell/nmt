@@ -116,6 +116,7 @@ def load_vocab(vocab_file):
 def check_vocab(vocab_file, out_dir, check_special_token=True, sos=None,
                 eos=None, unk=None):
   """Check if vocab_file doesn't exist, create from corpus_file."""
+  vocab_sizes = []
   for i in range(NUM_OUTPUTS_PER_TIMESTEP):
     this_vocab_file = vocab_file.split('.')[0] + str(i) + "." + vocab_file.split('.')[1]
     if tf.gfile.Exists(this_vocab_file):
@@ -140,12 +141,12 @@ def check_vocab(vocab_file, out_dir, check_special_token=True, sos=None,
             for word in vocab:
               f.write("%s\n" % word)
           this_vocab_file = new_vocab_file
+      vocab_sizes.append(vocab_size)
     else:
       raise ValueError("vocab_file '%s' does not exist." % this_vocab_file)
 
-    vocab_size = len(vocab)
-    # todo deal with multiple vocab sizes here? assumes all same right now
-  return vocab_size, vocab_file
+    # vocab_size = len(vocab)
+  return vocab_sizes, vocab_file
 
 
 def create_vocab_tables(src_vocab_file, tgt_vocab_file, share_vocab):

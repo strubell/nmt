@@ -480,7 +480,7 @@ def extend_hparams(hparams):
 
   # Source vocab
   check_special_token = getattr(hparams, "check_special_token", True)
-  src_vocab_size, src_vocab_file = vocab_utils.check_vocab(
+  src_vocab_sizes, src_vocab_file = vocab_utils.check_vocab(
       src_vocab_file,
       hparams.out_dir,
       check_special_token=check_special_token,
@@ -492,17 +492,17 @@ def extend_hparams(hparams):
   if hparams.share_vocab:
     utils.print_out("  using source vocab for target")
     tgt_vocab_file = src_vocab_file
-    tgt_vocab_size = src_vocab_size
+    tgt_vocab_sizes = src_vocab_sizes
   else:
-    tgt_vocab_size, tgt_vocab_file = vocab_utils.check_vocab(
+    tgt_vocab_sizes, tgt_vocab_file = vocab_utils.check_vocab(
         tgt_vocab_file,
         hparams.out_dir,
         check_special_token=check_special_token,
         sos=hparams.sos,
         eos=hparams.eos,
         unk=vocab_utils.UNK)
-  _add_argument(hparams, "src_vocab_size", src_vocab_size)
-  _add_argument(hparams, "tgt_vocab_size", tgt_vocab_size)
+  _add_argument(hparams, "src_vocab_sizes", src_vocab_sizes)
+  _add_argument(hparams, "tgt_vocab_sizes", tgt_vocab_sizes)
   _add_argument(hparams, "src_vocab_file", src_vocab_file)
   _add_argument(hparams, "tgt_vocab_file", tgt_vocab_file)
 
