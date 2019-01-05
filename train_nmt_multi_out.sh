@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-data_dir=/home/strubell/research/data/nmt_viet_multi
+data_dir=/mnt/nfs/work1/shenoy/amee/2018/grouped_traj/code/nmt_viet_multi/
+#data_dir=/home/strubell/research/data/nmt_viet_multi
 
 python -m nmt.nmt \
     --attention=scaled_luong \
