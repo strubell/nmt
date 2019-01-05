@@ -432,7 +432,7 @@ class BaseModel(object):
           for i in range(vocab_utils.NUM_OUTPUTS_PER_TIMESTEP):
             # need to build one of these for each of the outputs
             self.output_layers.append(tf.layers.Dense(
-                self.tgt_vocab_size, use_bias=False, name="output_projection"))
+                self.tgt_vocab_sizes[i], use_bias=False, name="output_projection"))
 
     with tf.variable_scope(scope or "dynamic_seq2seq", dtype=self.dtype):
       # Encoder
@@ -469,10 +469,10 @@ class BaseModel(object):
               target_output = self.iterator.target_output
               target_output = tf.Print(target_output, [tf.shape(target_output)], "TARGET OUTPUT", name="target_output_print")
 
-              # this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs, self.output_layers[i],
-              #                                target_output[:, :, i])
-              # loss += this_loss
-              loss += tf.nn.l2_loss(tf.get_variable("dumb", [10,10]))
+              this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs, self.output_layers[i],
+                                             target_output[:, :, i], self.tgt_vocab_sizes[i])
+              loss += this_loss
+              # loss += tf.nn.l2_loss(tf.get_variable("dumb", [10,10]))
           # else:
             # loss = tf.constant(0.0)
           logits.append(this_logits)
@@ -705,7 +705,7 @@ class BaseModel(object):
     pass
 
   def _softmax_cross_entropy_loss(
-      self, logits, decoder_cell_outputs, labels, output_layer):
+      self, logits, decoder_cell_outputs, labels, output_layer, vocab_size):
     """Compute softmax loss or sampled softmax loss."""
     if self.num_sampled_softmax > 0:
 
@@ -721,11 +721,11 @@ class BaseModel(object):
       # todo need to get correct tgt vocab size
       crossent = tf.nn.sampled_softmax_loss(
           weights=tf.transpose(output_layer.kernel),
-          biases=output_layer.bias or tf.zeros([self.tgt_vocab_size]),
+          biases=output_layer.bias or tf.zeros([vocab_size]),
           labels=labels,
           inputs=inputs,
           num_sampled=self.num_sampled_softmax,
-          num_classes=self.tgt_vocab_size,
+          num_classes=vocab_size,
           partition_strategy="div",
           seed=self.random_seed)
 
@@ -742,14 +742,14 @@ class BaseModel(object):
 
     return crossent
 
-  def _compute_loss(self, logits, decoder_cell_outputs, output_layer, target_output):
+  def _compute_loss(self, logits, decoder_cell_outputs, output_layer, target_output, vocab_size):
     """Compute optimization loss."""
     if self.time_major:
       target_output = tf.transpose(target_output)
     max_time = self.get_max_time(target_output)
 
     crossent = self._softmax_cross_entropy_loss(
-        logits, decoder_cell_outputs, target_output, output_layer)
+        logits, decoder_cell_outputs, target_output, output_layer, vocab_size)
 
     target_weights = tf.sequence_mask(
         self.iterator.target_sequence_length, max_time, dtype=self.dtype)
