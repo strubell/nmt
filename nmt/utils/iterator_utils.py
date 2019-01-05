@@ -278,7 +278,8 @@ def get_iterator(src_dataset,
   # with tf.Session() as sess:
   #   sess.run(tf.tables_initializer())
   #   sess.run(tf.global_variables_initializer())
-  #   sess.run(batched_iter.initializer,feed_dict={skip_count: 3})
+  #   sess.run(batched_iter.initializer, feed_dict={skip_count: 0})
+  #   # sess.run(batched_iter.initializer)
   #   print("BATCH:", sess.run(batched_iter.get_next()))
   #   # print("id",  sess.run(tgt_eos_id),  sess.run(tgt_sos_id))
 

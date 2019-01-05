@@ -165,6 +165,7 @@ def create_vocab_tables(src_vocab_file, tgt_vocab_file, share_vocab):
       tgt_vocab_fname = tgt_vocab_file.split('.')[0] + str(i) + "." + tgt_vocab_file.split('.')[1]
       tgt_vocab_table = lookup_ops.index_table_from_file(tgt_vocab_fname, default_value=UNK_ID)
       tgt_vocab_tables.append(tgt_vocab_table)
+
   return src_vocab_tables, tgt_vocab_tables
 
 

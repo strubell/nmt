@@ -28,7 +28,6 @@ from . import model_helper
 from .utils import iterator_utils
 from .utils import misc_utils as utils
 from .utils import vocab_utils
-from . import mobile
 
 utils.check_tensorflow_version()
 
@@ -431,12 +430,9 @@ class BaseModel(object):
           ## Loss
           if self.mode != tf.contrib.learn.ModeKeys.INFER:
             with tf.device(model_helper.get_device_str(self.num_encoder_layers - 1, self.num_gpus)):
-              target_output = self.iterator.target_output
-
-              target_output = tf.Print(target_output, [tf.shape(target_output)], "TARGET OUTPUT SHAPE")
-
+              target_output = self.iterator.target_output[:, :, i]
               this_loss = self._compute_loss(this_logits, this_decoder_cell_outputs, self.output_layers[i],
-                                             target_output[:, :, i], self.tgt_vocab_sizes[i])
+                                             target_output, self.tgt_vocab_sizes[i])
               loss += this_loss
           logits.append(this_logits)
           final_context_states.append(this_final_context_state)
@@ -500,21 +496,17 @@ class BaseModel(object):
         logits: size [time, batch_size, vocab_size] when time_major=True.
     """
     # todo need to get for specific target vocab
-    tgt_sos_id = tf.cast(self.tgt_vocab_tables[output_idx].lookup(tf.constant(hparams.sos)),
-                         tf.int32)
-    tgt_eos_id = tf.cast(self.tgt_vocab_tables[output_idx].lookup(tf.constant(hparams.eos)),
-                         tf.int32)
+    tgt_sos_id = tf.cast(self.tgt_vocab_tables[output_idx].lookup(tf.constant(hparams.sos)), tf.int32)
+    tgt_eos_id = tf.cast(self.tgt_vocab_tables[output_idx].lookup(tf.constant(hparams.eos)), tf.int32)
     iterator = self.iterator
 
     # maximum_iteration: The maximum decoding steps.
-    maximum_iterations = self._get_infer_maximum_iterations(
-        hparams, iterator.source_sequence_length)
+    maximum_iterations = self._get_infer_maximum_iterations(hparams, iterator.source_sequence_length)
 
     ## Decoder.
-    with tf.variable_scope("decoder") as decoder_scope:
-      cell, decoder_initial_state = self._build_decoder_cell(
-          hparams, encoder_outputs, encoder_state,
-          iterator.source_sequence_length)
+    with tf.variable_scope("decoder%d" % output_idx) as decoder_scope:
+      cell, decoder_initial_state = self._build_decoder_cell(hparams, encoder_outputs, encoder_state,
+                                                             iterator.source_sequence_length)
 
       # Optional ops depends on which mode we are in and which loss function we
       # are using.
@@ -541,10 +533,7 @@ class BaseModel(object):
             time_major=self.time_major)
 
         # Decoder
-        my_decoder = tf.contrib.seq2seq.BasicDecoder(
-            cell,
-            helper,
-            decoder_initial_state,)
+        my_decoder = tf.contrib.seq2seq.BasicDecoder(cell, helper, decoder_initial_state)
 
         # Dynamic decoding
         outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
@@ -635,7 +624,6 @@ class BaseModel(object):
         else:
           logits = outputs.rnn_output
           sample_id = outputs.sample_id
-
     return logits, decoder_cell_outputs, sample_id, final_context_state
 
   def get_max_time(self, tensor):
@@ -643,8 +631,7 @@ class BaseModel(object):
     return tensor.shape[time_axis].value or tf.shape(tensor)[time_axis]
 
   @abc.abstractmethod
-  def _build_decoder_cell(self, hparams, encoder_outputs, encoder_state,
-                          source_sequence_length):
+  def _build_decoder_cell(self, hparams, encoder_outputs, encoder_state, source_sequence_length):
     """Subclass must implement this.
 
     Args:
